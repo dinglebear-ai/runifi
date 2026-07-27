@@ -1,3 +1,9 @@
+---
+type: "Reference"
+title: "unifi-rmcp - UniFi MCP Server"
+openwiki_generated: true
+---
+
 # unifi-rmcp - UniFi MCP Server
 
 **unifi-rmcp** is a Rust-based MCP (Model Context Protocol) server that bridges AI clients to Ubiquiti UniFi network controllers. It provides read-only access to UniFi networks through both CLI tools and MCP server interfaces.
