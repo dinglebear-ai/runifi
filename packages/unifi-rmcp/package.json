@@ -1,6 +1,6 @@
 {
   "name": "unifi-rmcp",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Node launcher for the UniFi Rust MCP server and runifi CLI for network controller operations.",
   "license": "MIT",
   "homepage": "https://github.com/jmagar/runifi#readme",

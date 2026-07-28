@@ -3,7 +3,7 @@
   "name": "ai.dinglebear/unifi-rmcp",
   "title": "UniFi RMCP",
   "description": "Rust MCP server and CLI for UniFi Network controller operations.",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "websiteUrl": "https://github.com/jmagar/runifi",
   "repository": {
     "url": "https://github.com/jmagar/runifi",
@@ -25,7 +25,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "unifi-rmcp",
-      "version": "0.2.4",
+      "version": "0.2.5",
       "runtimeHint": "npx",
       "packageArguments": [
         {
@@ -98,11 +98,11 @@
       "namespace": "ai.dinglebear",
       "dnsDomain": "dinglebear.ai",
       "distribution": {
-        "npm": "unifi-rmcp@0.2.4",
+        "npm": "unifi-rmcp@0.2.5",
         "nodePackage": "unifi-rmcp"
       },
       "buildInfo": {
-        "version": "0.2.4",
+        "version": "0.2.5",
         "repository": "https://github.com/jmagar/runifi"
       }
     }
