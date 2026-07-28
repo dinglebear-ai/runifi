@@ -57,6 +57,7 @@
       "component": "unifi-rmcp",
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
+        "packages/unifi-rmcp/package.json",
         {
           "type": "json",
           "path": "server.json",
@@ -65,13 +66,18 @@
         {
           "type": "json",
           "path": "server.json",
-          "jsonpath": "$.packages[0].version"
+          "jsonpath": "$.packages[?(@.identifier == 'unifi-rmcp')].version"
         },
         {
-          "type": "generic",
-          "path": "server.json"
+          "type": "json",
+          "path": "server.json",
+          "jsonpath": "$['_meta']['io.modelcontextprotocol.registry/publisher-provided'].distribution.npm"
         },
-        "packages/unifi-rmcp/package.json"
+        {
+          "type": "json",
+          "path": "server.json",
+          "jsonpath": "$['_meta']['io.modelcontextprotocol.registry/publisher-provided'].buildInfo.version"
+        }
       ]
     }
   }
