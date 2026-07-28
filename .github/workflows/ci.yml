@@ -74,6 +74,12 @@ jobs:
       checks: write
     steps:
       - uses: actions/checkout@v4
+      # rustsec/audit-check shells out to cargo. The unraid self-hosted image
+      # has no toolchain on PATH, so without this the job dies with
+      # "Unable to locate executable file: cargo". Every other job here already
+      # installs the toolchain this way.
+      - name: Install Rust + soldr
+        uses: ./.github/actions/setup-rust-soldr
       - uses: rustsec/audit-check@v2.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
