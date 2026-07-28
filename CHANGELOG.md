@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5](https://github.com/dinglebear-ai/runifi/compare/v0.2.4...v0.2.5) (2026-07-28)
+
+
+### Bug Fixes
+
+* align unifi rmcp runtime naming ([01583b2](https://github.com/dinglebear-ai/runifi/commit/01583b2ac4484f2b442eebe249b7788829338f4c))
+* complete unifi rmcp package rename ([d9555c5](https://github.com/dinglebear-ai/runifi/commit/d9555c50996c9c379116fe1c0d0b4a3e7defd72f))
+* load production runtime environment ([#12](https://github.com/dinglebear-ai/runifi/issues/12)) ([a220e87](https://github.com/dinglebear-ai/runifi/commit/a220e87d0ecd4e2c9a83baaafcc0174c34bb7b00))
+* route rust builds through sccache wrapper ([965ab05](https://github.com/dinglebear-ai/runifi/commit/965ab0570d15a6e33e72b94373d94245d3c9063b))
+
+
+### Documentation
+
+* align README with RMCP guide ([31cbc01](https://github.com/dinglebear-ai/runifi/commit/31cbc01dd56883c095bac6dcaddffe9f1ee6de79))
+* save session log ([959c7ea](https://github.com/dinglebear-ai/runifi/commit/959c7eab3a0fd81f0cfa8f386bc9ad631c367323))
+* update OpenWiki ([#10](https://github.com/dinglebear-ai/runifi/issues/10)) ([0bf002c](https://github.com/dinglebear-ai/runifi/commit/0bf002cbce9f0c304b829d2bf039a3c2a960228f))
+
+
+### Refactoring
+
+* extract core unifi crate ([8a2d68e](https://github.com/dinglebear-ai/runifi/commit/8a2d68ee88e4aa8c6cb38c10550f703cfc5b2c49))
+* move unifi actions into core crate ([9bccb82](https://github.com/dinglebear-ai/runifi/commit/9bccb82fd1b40d6b4c67259d4ee148049dd91a8d))
+
+
+### CI
+
+* authenticate OpenWiki Tailscale with OAuth ([e9ec961](https://github.com/dinglebear-ai/runifi/commit/e9ec96158db1f0129fb9a872a53e436f4e3b49d1))
+* connect OpenWiki workflow to Tailscale ([4c3b68a](https://github.com/dinglebear-ai/runifi/commit/4c3b68a6e8c38f718b6cf86be7d67ad202ffefa4))
+* drop the redundant gitleaks secret-scan job ([fe9740d](https://github.com/dinglebear-ai/runifi/commit/fe9740dd51c705248cfdb4726e06111bb3ef0a99))
+* migrate Rust build to soldr/zccache caching ([c639033](https://github.com/dinglebear-ai/runifi/commit/c639033c601a91e9cb54782980c52abd2a49bb0d))
+* retire no-MCP marketplace variant workflows ([f313dff](https://github.com/dinglebear-ai/runifi/commit/f313dffe53e34659ad71f7daf43c8361b88a5e7d))
+* run OpenWiki on Tailscale runner ([166b0b5](https://github.com/dinglebear-ai/runifi/commit/166b0b57251945c92a6e289d2f91684ae204002d))
+* update workflows to runs-on [self-hosted, unraid] ([4fc8761](https://github.com/dinglebear-ai/runifi/commit/4fc8761250740f161d6bbf11bdf4b2addd40dc9d))
+
 ## [0.2.4](https://github.com/jmagar/runifi/compare/v0.2.3...v0.2.4) (2026-07-11)
 
 

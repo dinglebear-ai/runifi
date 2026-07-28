@@ -3260,7 +3260,7 @@ checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
 
 [[package]]
 name = "unifi"
-version = "0.1.0"
+version = "0.2.5"
 dependencies = [
  "anyhow",
  "reqwest 0.12.28",
@@ -3271,7 +3271,7 @@ dependencies = [
 
 [[package]]
 name = "unifi-rmcp"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "anyhow",
  "axum",
@@ -3780,7 +3780,7 @@ checksum = "1ffae5123b2d3fc086436f8834ae3ab053a283cfac8fe0a0b8eaae044768a4c4"
 
 [[package]]
 name = "xtask"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "anyhow",
  "regex",
