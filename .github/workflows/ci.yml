@@ -61,6 +61,10 @@ jobs:
     runs-on: [self-hosted, unraid]
     steps:
       - uses: actions/checkout@v4
+      # Same gap as the audit job: no toolchain on the unraid self-hosted
+      # image, so `cargo install` died with "cargo: command not found".
+      - name: Install Rust + soldr
+        uses: ./.github/actions/setup-rust-soldr
       - name: Install taplo
         run: cargo install taplo-cli --locked
       - name: Check TOML formatting
