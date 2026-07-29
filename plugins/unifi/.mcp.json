@@ -2,7 +2,21 @@
   "mcpServers": {
     "unifi": {
       "command": "npx",
-      "args": ["-y", "unifi-rmcp", "mcp"]
+      "args": ["-y", "unifi-rmcp", "mcp"],
+      "env": {
+        "UNIFI_URL": "${user_config.unifi_url}",
+        "UNIFI_API_KEY": "${user_config.unifi_api_key}",
+        "UNIFI_SITE": "${user_config.unifi_site}",
+        "UNIFI_SKIP_TLS_VERIFY": "${user_config.unifi_skip_tls}",
+        "UNIFI_LEGACY": "${user_config.unifi_legacy}",
+        "UNIFI_MCP_TOKEN": "${user_config.api_token}",
+        "UNIFI_MCP_NO_AUTH": "${user_config.no_auth}",
+        "UNIFI_MCP_AUTH_MODE": "${user_config.auth_mode}",
+        "UNIFI_MCP_PUBLIC_URL": "${user_config.public_url}",
+        "UNIFI_MCP_GOOGLE_CLIENT_ID": "${user_config.google_client_id}",
+        "UNIFI_MCP_GOOGLE_CLIENT_SECRET": "${user_config.google_client_secret}",
+        "UNIFI_MCP_AUTH_ADMIN_EMAIL": "${user_config.auth_admin_email}"
+      }
     }
   }
 }

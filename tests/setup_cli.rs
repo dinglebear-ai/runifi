@@ -118,20 +118,22 @@ fn plugin_hook_maps_plugin_options_into_env() {
     );
 }
 
-/// The plugin hook config must call the binary directly.
+/// Claude Code plugin hooks were retired. `setup plugin-hook` survives as a
+/// manual command, but the plugin must not ship a hooks config that runs it
+/// automatically.
 #[test]
-fn claude_hooks_call_binary_directly() {
-    let hooks_path =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("plugins/unifi/hooks/hooks.json");
-    let hooks: serde_json::Value =
-        serde_json::from_str(&fs::read_to_string(hooks_path).unwrap()).unwrap();
-    for hook_name in ["SessionStart", "ConfigChange"] {
-        let command = hooks["hooks"][hook_name][0]["hooks"][0]["command"]
-            .as_str()
-            .unwrap();
-        assert_eq!(
-            command,
-            "${CLAUDE_PLUGIN_ROOT}/bin/runifi setup plugin-hook"
+fn plugin_ships_no_claude_hooks() {
+    let plugin_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("plugins/unifi");
+    assert!(
+        !plugin_root.join("hooks").exists(),
+        "plugins/unifi/hooks must not be reintroduced"
+    );
+    for manifest in [".claude-plugin/plugin.json", ".codex-plugin/plugin.json"] {
+        let value: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(plugin_root.join(manifest)).unwrap()).unwrap();
+        assert!(
+            value.get("hooks").is_none(),
+            "{manifest} must not declare hooks"
         );
     }
 }

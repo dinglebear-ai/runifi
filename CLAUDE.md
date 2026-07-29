@@ -1,117 +1,323 @@
 # unifi-rmcp — CLAUDE.md
 
-UniFi network MCP server. Read-only REST API bridge for Ubiquiti controllers.
+Rust MCP server and CLI bridging the **UniFi Network controller REST API**.
+Exposes one action-dispatched MCP tool (`unifi`) plus the `runifi` CLI at
+full parity.
+
+> **Not read-only.** An earlier version of this file described this as a
+> "read-only REST bridge". That has not been true since the generated action
+> registry landed: 123 of the 266 actions are mutating and require
+> `unifi:admin`.
+
+## Repo Facts
+
+| Fact | Value |
+|---|---|
+| Remote | `git@github.com:dinglebear-ai/runifi.git` |
+| Default branch | `main` |
+| Cargo workspace | 3 members: `.` (root), `crates/unifi`, `xtask` |
+| Root package | `unifi-rmcp` (edition 2021) |
+| Binary / CLI | `runifi` |
+| MCP tool | `unifi` |
+| Service port | **40030** |
+| MSRV | 1.86 |
+| npm package | `unifi-rmcp` |
+
+**Editions are not uniform.** Root and `crates/unifi` are edition 2021;
+`xtask` is edition 2024. `src/setup.rs` relies on edition-2021 semantics
+(`std::env::set_var` without an `unsafe` block) — bumping the root to 2024
+requires touching `apply_plugin_options()`.
+
+### rmcp version — trust the lock, not the manifest
+
+`Cargo.toml` declares `rmcp = "1.6.0"`, but the caret range has already
+drifted: **`Cargo.lock` resolves rmcp 1.8.0**. runifi is the only repo in the
+fleet on 1.8 (most siblings are on 1.7.0 or 2.2.0). The declared version is
+fiction — read `Cargo.lock` before reasoning about rmcp API surface.
+
+`lab-auth` is a pinned git dependency on `dinglebear-ai/labby` (rev
+`87cec32`), already repointed off the dead `jmagar/lab.git` URL.
+
+## The Controller
+
+The target controller in this homelab is a **UniFi Cloud Gateway Max at
+`10.1.0.1`**, aliased **`mothership`**. It is the LAN router, gateway, DHCP
+server, WLAN controller, and UniFi Network controller in one box. Mutating
+actions against it change live network state — there is no staging tier.
 
 ## Module Map
 
 ```
-src/
-  unifi.rs         UnifiClient — HTTP REST client. One method per API endpoint.
-  app.rs           UnifiService — wraps UnifiClient. All business logic lives here.
-  config.rs        UnifiConfig (UNIFI_*) + McpConfig (UNIFI_MCP_*) + env loading.
-  mcp.rs           AppState, AuthPolicy, pub exports, test helper hook.
-  mcp/tools.rs     execute_tool() — thin shim: parse args, call service, return Value.
-  mcp/schemas.rs   tool_definitions() — JSON schema for the unifi tool.
-  mcp/prompts.rs   list_prompts() / get_prompt() — network_summary prompt.
-  mcp/rmcp_server.rs  UnifiRmcpServer — rmcp ServerHandler (tools/resources/prompts).
-  mcp/routes.rs    axum router with auth middleware and /health endpoint.
-  cli.rs           CliCommand — thin shim: parse args, call service, format/print.
-  lib.rs           Module declarations. testing:: module (test-support feature).
-  main.rs          Dispatch: serve_mcp / serve_stdio_mcp / run_cli.
-tests/
-  tool_dispatch.rs  MCP tool dispatch unit tests (no network).
-  cli_parse.rs      CLI argument parsing unit tests (no network).
+src/                          # unifi-rmcp — MCP/CLI projection layer
+  main.rs                     Dispatch: serve_mcp / serve_stdio_mcp / doctor / setup / run_cli
+                              + print_usage + validate_bind_security
+  lib.rs                      Module declarations, OAuth wiring, testing:: hook
+  config.rs                   Config/McpConfig/AuthConfig — config.toml then UNIFI_* env overrides
+  setup.rs                    setup check | repair | install | plugin-hook; apply_plugin_options()
+  cli.rs                      argv -> UnifiService -> stdout (thin shim)
+  cli/doctor.rs               Pre-flight environment diagnosis
+  logging.rs, logging/aurora.rs   Tracing setup + Aurora CLI theming
+  observability.rs            Tracing/metrics init
+  token_limit.rs              Response size guardrail
+  mcp.rs                      AppState, AuthPolicy, build_auth_layer, pub exports
+  mcp/rmcp_server.rs          UnifiRmcpServer — rmcp ServerHandler (tools/resources/prompts) + scope checks
+  mcp/tools.rs                execute_tool() -> dispatch() — thin shim, plus HELP_TEXT
+  mcp/schemas.rs              tool_definitions() — builds the action enum from all_capabilities()
+  mcp/prompts.rs              list_prompts() / get_prompt() — network_summary
+  mcp/routes.rs               axum router, auth middleware, /health
+
+crates/unifi/                 # unifi — reusable core (no MCP/CLI types)
+  lib.rs                      ActionRequest, re-exports
+  service.rs                  UnifiService — the action execution boundary
+  client.rs, http.rs          HTTP transport
+  config.rs                   Controller-side config struct
+  api.rs, api/{official,internal,path}.rs   Path families + ApiSourceFamily
+  actions.rs, actions/{official,internal,hybrid}.rs   Action routing; hybrid::resolve()
+  capabilities.rs             Capability, AuthScope, all_capabilities(), find_capability()
+  capabilities/official_network.rs   Parses data/unifi_official_network_v10_3_58.json
+  capabilities/internal_network.rs   Parses data/unifi_internal_endpoint_models.json + legacy/hybrid
+
+xtask/                        # dev tooling (edition 2024)
+  verify_endpoints.rs, endpoint_probe.rs   contract + safe_live endpoint verification
+  official_api.rs, internal_reference.rs   inventory regeneration
+  forbidden_strings.rs, verify_policy.rs   guardrails
 ```
 
-## Strict Layering Rules
+## Action Surface
 
-- **All business logic** goes in `app.rs` / `UnifiService`.
-- **All HTTP calls** go in `unifi.rs` / `UnifiClient`.
-- `mcp/tools.rs` and `cli.rs` are thin shims only: parse args, call service, return/print.
-- No logic in `main.rs` beyond dispatch.
+The action enum is **generated at build time from JSON inventories in
+`data/`** — it is not hand-maintained. `all_capabilities()` is the single
+source of truth.
+
+| Family | Count | Source | Path base |
+|---|---:|---|---|
+| `official_*` | 78 (36 mutating) | `data/unifi_official_network_v10_3_58.json` | `/proxy/network/integration/v1` |
+| `unifi_*` | 175 (87 mutating) | `data/unifi_internal_endpoint_models.json` (`runtime: true` only) | `/proxy/network/api/s/{site}`, `/proxy/network/v2/api/site/{site}` |
+| Legacy convenience | 8 (read-only) | hardcoded in `internal_network.rs` | internal paths |
+| Hybrid aliases | 5 | hardcoded in `internal_network.rs` | resolves to official or internal |
+| `help` | 1 | `mcp/tools.rs` | n/a |
+| **Total in enum** | **267** | | |
+
+**Legacy convenience actions** (all read-only, `verification_mode:
+"legacy_alias"`): `clients`, `devices`, `wlans`, `health`, `alarms`,
+`events`, `sysinfo`, `me`.
+
+**Hybrid aliases**: `list_clients`, `list_devices`, `list_networks`,
+`list_wifi`, `get_system_info`. `hybrid::resolve()` picks the backend:
+
+- `params.prefer = "official" | "internal"` — explicit
+- no `prefer`, but `params.siteId` present — official
+- otherwise — internal (default)
+
+`prefer` is stripped from params before dispatch.
 
 ## How to Add a New Action
 
-1. Add method to `UnifiClient` in `src/unifi.rs` — one GET call, return raw `Value`.
-2. Add delegating method to `UnifiService` in `src/app.rs`.
-3. Add match arm in `dispatch()` in `src/mcp/tools.rs`.
-4. Add the action string to `UNIFI_ACTIONS` and the schema in `src/mcp/schemas.rs`.
-5. Add the action to `READ_ONLY_ACTIONS` in `src/mcp/rmcp_server.rs`.
-6. Add `CliCommand` variant, parse arm, dispatch arm, and formatter in `src/cli.rs`.
-7. Update help text in `src/mcp/tools.rs` (`HELP_TEXT`) and `src/main.rs` (`print_usage`).
+Generated actions come from the `data/` inventories, so most additions are
+data changes, not code changes:
 
-## UniFi API Path Notes
+1. **Generated action** — add/regenerate the entry in the relevant `data/`
+   JSON (`cargo run -p xtask -- official-api` / `internal-reference`), then
+   run `cargo run -p xtask -- verify-api-endpoints --mode contract`.
+   Registration, scope, and the MCP schema enum follow automatically.
+2. **Hybrid alias** — add to `official_target()` and `internal_target()` in
+   `crates/unifi/src/actions/hybrid.rs`, plus a `hybrid(...)` entry in
+   `capabilities/internal_network.rs`.
+3. **Legacy convenience action** — add a `legacy(...)` entry in
+   `capabilities/internal_network.rs` and a `CliCommand` variant + formatter
+   in `src/cli.rs`.
 
-**UDM / UniFi OS (default):**
+Do **not** hand-edit the action enum in `src/mcp/schemas.rs` — it is derived.
+
+## Strict Layering Rules
+
+- **All business logic** lives in `crates/unifi` (`UnifiService`).
+- **All HTTP calls** live in `crates/unifi/src/{client,http}.rs`.
+- `src/mcp/tools.rs` and `src/cli.rs` are thin shims: parse args, call the
+  service, return/print.
+- No logic in `main.rs` beyond dispatch and bind-security validation.
+- `tests/core_crate_boundary.rs` enforces that `crates/unifi` stays free of
+  MCP/CLI types.
+
+## UniFi API Path Families
+
+**UniFi OS / UDM (default):**
 ```
-/proxy/network/api/s/{site}/stat/sta        — clients
-/proxy/network/api/s/{site}/stat/device     — devices
-/proxy/network/api/s/{site}/rest/wlanconf   — WLANs
-/proxy/network/api/s/{site}/stat/health     — health
-/proxy/network/api/s/{site}/rest/alarm      — alarms
-/proxy/network/api/s/{site}/rest/event      — events
-/proxy/network/api/s/{site}/stat/sysinfo    — sysinfo
-/api/self                                   — me (no /proxy/network prefix)
+/proxy/network/integration/v1/...           official_* (Network Integration API)
+/proxy/network/api/s/{site}/...             unifi_* + legacy convenience
+/proxy/network/v2/api/site/{site}/...       unifi_* (v2 endpoints)
+/api/self                                   me (no /proxy/network prefix)
 ```
 
-**Legacy (UNIFI_LEGACY=true):** Same paths without `/proxy/network`.
+**Legacy (`UNIFI_LEGACY=true`):** same paths without the `/proxy/network`
+prefix, for pre-UDM controllers on port 8443.
 
-**Response shape:** All site-scoped endpoints return `{"meta": {"rc": "ok"}, "data": [...]}`.
-`me` returns `{"data": {...}}`. The client returns the raw Value; callers index `["data"]`.
+**Response shape:** site-scoped internal endpoints return
+`{"meta": {"rc": "ok"}, "data": [...]}`; `me` returns `{"data": {...}}`. The
+client returns the raw `Value`; callers index `["data"]`.
 
 ## Auth
 
-Two modes via `AuthPolicy`:
-- `LoopbackDev` — no auth (loopback bind only)
-- `Mounted { auth_state: None }` — static bearer token (`UNIFI_MCP_TOKEN`)
-- `Mounted { auth_state: Some(_) }` — OAuth (Google) via lab-auth
+`AuthPolicy` (in `src/mcp.rs`) has three effective states:
 
-Scopes: `unifi:read` (all actions), `unifi:admin` (satisfies read too).
+| Variant | Meaning |
+|---|---|
+| `LoopbackDev` | No auth. Legal only on a loopback bind — the bind *is* the trust boundary. Scope checks are bypassed. |
+| `Mounted { auth_state: None }` | Static bearer token (`UNIFI_MCP_TOKEN`). Scope checks run. |
+| `Mounted { auth_state: Some(_) }` | Google OAuth/JWT via `lab-auth`. Scope checks run. |
 
-## Key Env Vars
+Scopes: `unifi:read` and `unifi:admin`. **`unifi:admin` satisfies
+`unifi:read`; the reverse is not true.** The required scope per action comes
+from `Capability::auth_scope` — GET/non-mutating maps to read, everything
+else to admin. The static bearer token is granted both scopes.
+
+`validate_bind_security()` in `main.rs` refuses a non-loopback bind unless
+`UNIFI_MCP_TOKEN` is set, OAuth mode is on, or `UNIFI_NOAUTH=true` declares
+that an upstream gateway handles auth.
+
+Stdio MCP runs as a trusted local child process and does no HTTP auth.
+
+## Configuration
+
+Precedence: **`config.toml` → `UNIFI_*` env overrides** (env always wins).
+Host installs also source `~/.unifi-rmcp/.env` first; containers source
+`/data/.env` via `entrypoint.sh`.
+
+### Env vars read by the runtime
 
 ```
-UNIFI_URL                  Controller base URL (required)
-UNIFI_API_KEY              X-API-KEY header value (required)
-UNIFI_SITE                 Site name (default: default)
-UNIFI_SKIP_TLS_VERIFY      Skip TLS cert check (default: true)
-UNIFI_LEGACY               No /proxy/network prefix (default: false)
-UNIFI_MCP_PORT             Bind port (default: 40030)
-UNIFI_MCP_TOKEN            Static bearer token
-UNIFI_MCP_NO_AUTH          Disable auth (loopback only)
+UNIFI_URL                     Controller base URL (required)
+UNIFI_API_KEY                 X-API-KEY header value (required)
+UNIFI_SITE                    Site name (default: default)
+UNIFI_SITE_ID                 Official API site UUID (official_* live calls/tests)
+UNIFI_SKIP_TLS_VERIFY         Skip TLS cert check (default: true)
+UNIFI_LEGACY                  Drop /proxy/network prefix (default: false)
+
+UNIFI_MCP_HOST                Bind host (default: 0.0.0.0)
+UNIFI_MCP_PORT                Bind port (default: 40030)
+UNIFI_MCP_TOKEN               Static bearer token
+UNIFI_MCP_NO_AUTH             Disable auth (loopback only)
+UNIFI_MCP_DISABLE_HTTP_AUTH   Compatibility alias for UNIFI_MCP_NO_AUTH
+UNIFI_NOAUTH                  Assert an upstream gateway enforces auth
+UNIFI_MCP_ALLOWED_HOSTS       Comma-separated Host allowlist
+UNIFI_MCP_ALLOWED_ORIGINS     Comma-separated Origin allowlist
+UNIFI_MCP_PUBLIC_URL          Public URL for OAuth metadata
+UNIFI_MCP_AUTH_MODE           bearer | oauth
+UNIFI_MCP_AUTH_ADMIN_EMAIL    OAuth bootstrap admin
+UNIFI_MCP_GOOGLE_CLIENT_ID    OAuth client id
+UNIFI_MCP_GOOGLE_CLIENT_SECRET  OAuth client secret
+UNIFI_MCP_AUTH_SQLITE_PATH    OAuth state DB
+UNIFI_MCP_AUTH_KEY_PATH       OAuth JWT signing key
+UNIFI_MCP_HOME                Override appdata dir (setup/plugin-hook only)
 ```
 
-Runtime secrets live in `~/.unifi-rmcp/.env` on the host. In Docker, that
-directory is mounted at `/data`, and the entrypoint sources `/data/.env` before
-validating required `UNIFI_*` settings.
+**`config.toml`-only** (no env override): `mcp.server_name`, and the
+`[mcp.auth]` TTL/rate-limit fields (`access_token_ttl_secs`,
+`refresh_token_ttl_secs`, `auth_code_ttl_secs`, `register_rpm`,
+`authorize_rpm`, `disable_static_token_with_oauth`, `allowed_emails`,
+`allowed_client_redirect_uris`). There is **no** `UNIFI_MCP_SERVER_NAME` env
+var despite what older docs claimed.
 
-## CLI ↔ MCP Action Parity
+**xtask-only** (endpoint verification, never read by the server):
+`UNIFI_ALLOW_INSECURE_TLS`, `UNIFI_RESOLVE_IP`, `UNIFI_VERIFY_TIMEOUT_SECS`,
+`UNIFI_VERIFY_RATE_LIMIT_MS`, `UNIFI_VERIFY_MAX_REQUESTS`,
+`UNIFI_VERIFY_UNVERIFIED_INTERNAL`.
 
-Every MCP action maps 1-to-1 with a CLI command. Both shims call the same `UnifiService` method.
+## CLI ↔ MCP Parity
 
-| Service Method | MCP Action | CLI Command |
-|---|---|---|
-| `service.clients()` | `unifi(action="clients")` | `unifi clients [--json]` |
-| `service.devices()` | `unifi(action="devices")` | `unifi devices [--json]` |
-| `service.wlans()` | `unifi(action="wlans")` | `unifi wlans [--json]` |
-| `service.health()` | `unifi(action="health")` | `unifi health [--json]` |
-| `service.alarms()` | `unifi(action="alarms")` | `unifi alarms [--json]` |
-| `service.events(limit)` | `unifi(action="events", limit=N)` | `unifi events [--limit N] [--json]` |
-| `service.sysinfo()` | `unifi(action="sysinfo")` | `unifi sysinfo [--json]` |
-| `service.me()` | `unifi(action="me")` | `unifi me [--json]` |
-| _(built-in)_ | `unifi(action="help")` | `unifi --help` |
+Every action is reachable from both surfaces through the same
+`UnifiService`. Named CLI subcommands exist for the 8 legacy convenience
+actions; every other action is reached generically:
+
+```bash
+runifi <action> [--param k=v]... [--body-json JSON] [--json]
+```
+
+| Surface | Invocation |
+|---|---|
+| Legacy convenience | `runifi clients --json` / `unifi(action="clients")` |
+| Events with limit | `runifi events --limit 50` / `unifi(action="events", params={"limit":50})` |
+| Official | `runifi official_list_clients --param siteId=<uuid>` |
+| Internal | `runifi unifi_list_wlans --json` |
+| Hybrid | `runifi list_clients --param prefer=official --param siteId=<uuid>` |
+| Mutating | `runifi official_create_network --param siteId=<uuid> --body-json '{"name":"IoT"}'` |
+| Help | `runifi --help` / `unifi(action="help")` |
+
+## Plugin
+
+`plugins/unifi/` ships the Claude Code and Codex plugin: manifests, `.mcp.json`,
+the bundled `bin/runifi`, and `skills/unifi/SKILL.md`.
+
+**Claude Code plugin hooks have been retired.** There is no
+`plugins/unifi/hooks/` directory and neither manifest declares a `hooks` key;
+`scripts/validate-plugin-layout.sh` and `tests/setup_cli.rs` both assert they
+stay gone.
+
+The binary command the hook used to run still exists and is now **manual**:
+
+```bash
+runifi setup plugin-hook [--no-repair] [--json]
+```
+
+It maps `CLAUDE_PLUGIN_OPTION_*` env vars into `UNIFI_*`, refreshes the
+`~/.local/bin` copy of the binary, and runs check + auto-repair.
+
+**Credentials do not depend on it.** `plugins/unifi/.mcp.json` carries an `env`
+block that maps 12 `userConfig` keys straight into the server process
+(`${user_config.unifi_url}` → `UNIFI_URL`, and so on), so plugin settings reach
+the runtime on every launch with no hook and no manual step. `apply_plugin_options()`
+in `src/setup.rs` is the parallel `CLAUDE_PLUGIN_OPTION_*` translation used only
+when you invoke `setup plugin-hook` by hand — **keep the two maps in sync when you
+add or rename a `userConfig` key.**
+
+What `setup plugin-hook` still buys you manually: the `~/.local/bin` binary
+refresh and the preflight checks. Neither is required for the server to start
+configured.
 
 ## Build & Test
 
 ```bash
-cargo check          # type-check
-cargo test           # unit tests (no network required)
+cargo check                                   # type-check
+cargo test                                    # unit + integration (no network)
+cargo clippy -- -D warnings
+cargo fmt --check
+just validate-plugin                          # plugin manifests/skills/no-hooks
+cargo run -p xtask -- verify-api-endpoints --mode contract
+
 cargo run --bin runifi -- --help
+cargo run --bin runifi -- doctor --json
 cargo run --bin runifi -- health --json
-cargo run --bin runifi           # HTTP MCP server on :40030
-cargo run --bin runifi -- mcp    # stdio MCP transport
+cargo run --bin runifi                        # HTTP MCP server on :40030
+cargo run --bin runifi -- mcp                 # stdio MCP transport
 ```
 
+Live probes need a real controller and are opt-in:
+
+```bash
+UNIFI_URL=https://10.1.0.1 UNIFI_API_KEY=... UNIFI_SITE_ID=<uuid> \
+  cargo run -p xtask -- verify-api-endpoints --mode safe_live
+```
+
+`tests/live_internal_smoke.rs` and `tests/live_official_smoke.rs` are the
+network-touching tests; the rest run offline.
+
+## Agent Memory Files
+
+`AGENTS.md` and `GEMINI.md` are symlinks to this file. Never edit them
+directly — edit `CLAUDE.md`. Recreate with:
+
+```bash
+ln -sf CLAUDE.md AGENTS.md
+ln -sf CLAUDE.md GEMINI.md
+```
+
+## Known Doc Debt
+
+`docs/INVENTORY.md`, `docs/repo/REPO.md`, and `docs/mcp/PRE-COMMIT.md` are
+boilerplate copied from `syslog-mcp`/cortex — they reference `skills/syslog/`,
+a SQLite WAL backup script, and a `hooks/scripts/` tree that have never
+existed in this repo. Treat them as untrusted; `src/`, `data/`, and this file
+are authoritative.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
