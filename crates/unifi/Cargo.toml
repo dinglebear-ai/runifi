@@ -2,7 +2,7 @@
 name = "unifi"
 version = "0.2.5"
 edition = "2024"
-rust-version = "1.92"
+rust-version = "1.97.1"
 categories = ["api-bindings", "network-programming"]
 keywords = ["unifi", "ubiquiti", "networking"]
 repository = "https://github.com/jmagar/runifi"
