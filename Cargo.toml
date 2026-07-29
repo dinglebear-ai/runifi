@@ -2,11 +2,19 @@
 members = [".", "crates/unifi", "xtask"]
 resolver = "2"
 
+[workspace.package]
+
+# Fleet edition (ADR-0002). Members inherit via edition.workspace = true.
+edition = "2024"
+# Fleet MSRV — the floor this repo supports. A separate promise from
+# rust-toolchain.toml's channel, which is what we BUILD with. Both are
+# 1.97.1 as of 2026-07-29 (ADR-0001 toolchain, ADR-0024 MSRV).
+rust-version = "1.97.1"
 [package]
 name = "unifi-rmcp"
 version = "0.2.5"
-edition = "2024"
-rust-version = "1.92"
+edition.workspace = true
+rust-version.workspace = true
 categories = ["command-line-utilities", "development-tools"]
 keywords = ["mcp", "unifi", "ubiquiti", "networking", "rmcp"]
 repository = "https://github.com/jmagar/runifi"

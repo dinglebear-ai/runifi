@@ -20,7 +20,7 @@ full parity.
 | Binary / CLI | `runifi` |
 | MCP tool | `unifi` |
 | Service port | **40030** |
-| MSRV | 1.86 |
+| MSRV | 1.97.1 |
 | npm package | `unifi-rmcp` |
 
 **Editions are not uniform.** Root and `crates/unifi` are edition 2021;
@@ -30,10 +30,11 @@ requires touching `apply_plugin_options()`.
 
 ### rmcp version — trust the lock, not the manifest
 
-`Cargo.toml` declares `rmcp = "1.6.0"`, but the caret range has already
-drifted: **`Cargo.lock` resolves rmcp 1.8.0**. runifi is the only repo in the
-fleet on 1.8 (most siblings are on 1.7.0 or 2.2.0). The declared version is
-fiction — read `Cargo.lock` before reasoning about rmcp API surface.
+`Cargo.toml` pins **`rmcp = "=3.0.0-beta.2"`** exactly, and `Cargo.lock` agrees.
+The `=` is what stops the caret drift this repo used to have — it declared
+`1.6.0` while the lock had already moved on. `rmcp-macros` resolves to `3.0.0`
+as a transitive of the `macros` feature; that mismatch is normal, do not try to
+pin it to the beta.
 
 `lab-auth` is a pinned git dependency on `dinglebear-ai/labby` (rev
 `87cec32`), already repointed off the dead `jmagar/lab.git` URL.
