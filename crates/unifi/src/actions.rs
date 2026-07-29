@@ -2,11 +2,11 @@ pub mod hybrid;
 pub mod internal;
 pub mod official;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde_json::Value;
 
 use crate::capabilities::find_capability;
-use crate::{api::ApiSourceFamily, UnifiConfig};
+use crate::{UnifiConfig, api::ApiSourceFamily};
 
 #[derive(Debug, Clone)]
 pub struct ActionRequest {

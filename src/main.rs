@@ -1,9 +1,9 @@
 use anyhow::Result;
 use std::sync::Arc;
 
-use rmcp::{transport::stdio, ServiceExt};
+use rmcp::{ServiceExt, transport::stdio};
 use tracing::info;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 use unifi::{UnifiClient, UnifiService};
 use unifi_rmcp::{
     cli,

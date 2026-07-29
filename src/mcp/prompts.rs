@@ -1,13 +1,14 @@
 use rmcp::model::{
-    GetPromptRequestParams, GetPromptResult, ListPromptsResult, Prompt, PromptMessage,
-    PromptMessageRole,
+    GetPromptRequestParams, GetPromptResult, ListPromptsResult, Prompt, PromptMessage, Role,
 };
 
 pub(super) fn list_prompts() -> ListPromptsResult {
     ListPromptsResult {
         prompts: vec![Prompt::new(
             "network_summary",
-            Some("Check site health, connected clients, and alarms, then summarize the network status."),
+            Some(
+                "Check site health, connected clients, and alarms, then summarize the network status.",
+            ),
             None,
         )],
         ..Default::default()
@@ -17,7 +18,7 @@ pub(super) fn list_prompts() -> ListPromptsResult {
 pub(super) fn get_prompt(request: GetPromptRequestParams) -> anyhow::Result<GetPromptResult> {
     match request.name.as_str() {
         "network_summary" => Ok(GetPromptResult::new(vec![PromptMessage::new_text(
-            PromptMessageRole::User,
+            Role::User,
             "Use the unifi tool with action=health to retrieve site health, \
              then action=clients for connected client counts, \
              then action=alarms for active alarms. \

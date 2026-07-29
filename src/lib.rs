@@ -7,7 +7,7 @@ pub mod config;
 pub mod mcp;
 pub mod setup;
 
-pub use unifi::{actions, capabilities, UnifiService};
+pub use unifi::{UnifiService, actions, capabilities};
 
 #[cfg(any(test, feature = "test-support"))]
 #[doc(hidden)]

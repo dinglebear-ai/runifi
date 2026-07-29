@@ -11,7 +11,7 @@ use std::{
 
 use serde::Serialize;
 
-use crate::config::{default_data_dir, Config};
+use crate::config::{Config, default_data_dir};
 
 // ── check record ──────────────────────────────────────────────────────────────
 
@@ -238,7 +238,7 @@ async fn check_upstream(url: &str, api_key: &str, skip_tls: bool, legacy: bool) 
                 "connectivity",
                 "Upstream reachable",
                 format!("Failed to build HTTP client: {e}"),
-            )
+            );
         }
     };
 

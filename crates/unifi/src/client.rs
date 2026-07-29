@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use reqwest::Client;
 use serde_json::Value;
 
-use crate::{http, UnifiConfig};
+use crate::{UnifiConfig, http};
 
 /// HTTP REST client for UniFi controllers.
 ///

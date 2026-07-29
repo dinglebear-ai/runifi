@@ -1,12 +1,13 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use reqwest::Method;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::{
-    api::{internal::InternalNetworkApi, path, ApiSourceFamily},
+    UnifiClient, UnifiConfig,
+    api::{ApiSourceFamily, internal::InternalNetworkApi, path},
     capabilities::Capability,
-    http, UnifiClient, UnifiConfig,
+    http,
 };
 
 pub async fn execute(cfg: &UnifiConfig, capability: &Capability, params: &Value) -> Result<Value> {

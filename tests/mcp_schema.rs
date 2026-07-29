@@ -9,7 +9,9 @@ fn schema_contains_official_and_internal_actions() {
     assert!(actions.iter().any(|value| value == "clients"));
     assert!(actions.iter().any(|value| value == "official_list_clients"));
     assert!(actions.iter().any(|value| value == "unifi_list_alarms"));
-    assert!(actions
-        .iter()
-        .any(|value| value == "unifi_create_firewall_policy"));
+    assert!(
+        actions
+            .iter()
+            .any(|value| value == "unifi_create_firewall_policy")
+    );
 }

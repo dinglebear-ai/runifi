@@ -1,8 +1,8 @@
 use serde_json::json;
 
 use unifi::{
-    actions::{ActionDispatcher, ActionRequest},
     UnifiConfig,
+    actions::{ActionDispatcher, ActionRequest},
 };
 
 fn test_config(url: impl Into<String>) -> UnifiConfig {
@@ -48,8 +48,10 @@ async fn official_list_clients_sends_expected_get_request() {
         .expect("official list clients should succeed");
 
     let request = server.request();
-    assert!(request
-        .starts_with("get /proxy/network/integration/v1/sites/site-1/clients?limit=1 http/1.1"));
+    assert!(
+        request
+            .starts_with("get /proxy/network/integration/v1/sites/site-1/clients?limit=1 http/1.1")
+    );
     assert!(request.contains("x-api-key: test-key"));
 }
 
@@ -318,8 +320,11 @@ async fn firewall_ordering_accepts_single_zone_convenience_query() {
         .expect("firewall ordering should expand a single zone query");
 
     let request = server.request();
-    assert!(request
-        .starts_with("get /proxy/network/integration/v1/sites/site-1/firewall/policies/ordering?"));
+    assert!(
+        request.starts_with(
+            "get /proxy/network/integration/v1/sites/site-1/firewall/policies/ordering?"
+        )
+    );
     assert!(request.contains("sourcefirewallzoneid=zone-1"));
     assert!(request.contains("destinationfirewallzoneid=zone-1"));
 }

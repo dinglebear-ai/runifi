@@ -1,7 +1,7 @@
 use std::net::TcpListener;
 use std::path::PathBuf;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde::Serialize;
 
 const BINARY_NAME: &str = "runifi";
@@ -216,8 +216,11 @@ fn apply_plugin_options() {
             if s.is_empty() || s.contains('\n') || s.contains('\r') {
                 continue;
             }
-            // edition 2021: set_var is safe (no unsafe block required).
-            std::env::set_var(dest, v);
+            // SAFETY: edition 2024 marks `set_var` unsafe because concurrent
+            // reads of the environment are UB. This runs once during CLI
+            // startup, before the config is loaded and before any task or
+            // thread that reads the environment is spawned.
+            unsafe { std::env::set_var(dest, v) };
         }
     }
 }

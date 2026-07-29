@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use reqwest::{Client, Method, StatusCode};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::UnifiConfig;
 

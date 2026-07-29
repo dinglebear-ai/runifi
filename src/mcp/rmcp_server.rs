@@ -2,24 +2,25 @@ use std::{borrow::Cow, net::Ipv6Addr, sync::Arc, time::Instant};
 
 use lab_auth::AuthContext;
 use rmcp::{
+    ErrorData, RoleServer, ServerHandler,
     model::{
-        CallToolRequestParams, CallToolResult, Content, GetPromptRequestParams, GetPromptResult,
-        Implementation, ListPromptsResult, ListResourcesResult, ListToolsResult,
-        PaginatedRequestParams, RawResource, ReadResourceRequestParams, ReadResourceResult,
-        Resource, ResourceContents, ServerCapabilities, ServerInfo, Tool,
+        CallToolRequestParams, CallToolResponse, CallToolResult, ContentBlock,
+        GetPromptRequestParams, GetPromptResponse, Implementation, ListPromptsResult,
+        ListResourcesResult, ListToolsResult, PaginatedRequestParams, ReadResourceRequestParams,
+        ReadResourceResponse, ReadResourceResult, Resource, ResourceContents, ServerCapabilities,
+        ServerInfo, Tool,
     },
     service::RequestContext,
     transport::streamable_http_server::{
-        session::local::LocalSessionManager, StreamableHttpServerConfig, StreamableHttpService,
+        StreamableHttpServerConfig, StreamableHttpService, session::local::LocalSessionManager,
     },
-    ErrorData, RoleServer, ServerHandler,
 };
 use serde_json::{Map, Value};
 
 use crate::config::McpConfig;
-use unifi::capabilities::{find_capability, AuthScope};
+use unifi::capabilities::{AuthScope, find_capability};
 
-use super::{prompts, schemas::tool_definitions, tools::execute_tool, AppState, AuthPolicy};
+use super::{AppState, AuthPolicy, prompts, schemas::tool_definitions, tools::execute_tool};
 
 const READ_SCOPE: &str = "unifi:read";
 const ADMIN_SCOPE: &str = "unifi:admin";
@@ -55,7 +56,7 @@ impl ServerHandler for UnifiRmcpServer {
         &self,
         request: CallToolRequestParams,
         context: RequestContext<RoleServer>,
-    ) -> Result<CallToolResult, ErrorData> {
+    ) -> Result<CallToolResponse, ErrorData> {
         let tool_name = request.name.to_string();
 
         let action: String = request
@@ -86,7 +87,7 @@ impl ServerHandler for UnifiRmcpServer {
                     elapsed_ms = started.elapsed().as_millis(),
                     "MCP tool execution completed"
                 );
-                tool_result_from_json(result)
+                tool_result_from_json(result).map(Into::into)
             }
             Err(error) if is_validation_error(&error) => {
                 tracing::warn!(
@@ -103,9 +104,10 @@ impl ServerHandler for UnifiRmcpServer {
                     error = %error,
                     "MCP tool execution failed"
                 );
-                Ok(CallToolResult::error(vec![Content::text(format!(
+                Ok(CallToolResult::error(vec![ContentBlock::text(format!(
                     "Tool execution failed for action '{action}'. Check server logs for details."
-                ))]))
+                ))])
+                .into())
             }
         }
     }
@@ -128,7 +130,7 @@ impl ServerHandler for UnifiRmcpServer {
         &self,
         request: ReadResourceRequestParams,
         context: RequestContext<RoleServer>,
-    ) -> Result<ReadResourceResult, ErrorData> {
+    ) -> Result<ReadResourceResponse, ErrorData> {
         require_auth_context(&self.state, &context)?;
         if request.uri != SCHEMA_RESOURCE_URI {
             return Err(ErrorData::invalid_params(
@@ -139,11 +141,10 @@ impl ServerHandler for UnifiRmcpServer {
         let schema = tool_definitions();
         let text = serde_json::to_string_pretty(&schema)
             .map_err(|e| ErrorData::internal_error(format!("serialization error: {e}"), None))?;
-        Ok(ReadResourceResult::new(vec![ResourceContents::text(
-            text,
-            SCHEMA_RESOURCE_URI,
-        )
-        .with_mime_type("application/json")]))
+        Ok(ReadResourceResult::new(vec![
+            ResourceContents::text(text, SCHEMA_RESOURCE_URI).with_mime_type("application/json"),
+        ])
+        .into())
     }
 
     // ── prompts ───────────────────────────────────────────────────────────────
@@ -161,9 +162,11 @@ impl ServerHandler for UnifiRmcpServer {
         &self,
         request: GetPromptRequestParams,
         context: RequestContext<RoleServer>,
-    ) -> Result<GetPromptResult, ErrorData> {
+    ) -> Result<GetPromptResponse, ErrorData> {
         require_auth_context(&self.state, &context)?;
-        prompts::get_prompt(request).map_err(|e| ErrorData::invalid_params(e.to_string(), None))
+        prompts::get_prompt(request)
+            .map(Into::into)
+            .map_err(|e| ErrorData::invalid_params(e.to_string(), None))
     }
 
     // ── server info ───────────────────────────────────────────────────────────
@@ -187,7 +190,7 @@ impl ServerHandler for UnifiRmcpServer {
 
 pub fn streamable_http_config(config: &McpConfig) -> StreamableHttpServerConfig {
     StreamableHttpServerConfig::default()
-        .with_stateful_mode(false)
+        .with_legacy_session_mode(false)
         .with_json_response(true)
         .with_allowed_hosts(allowed_hosts(config))
         .with_allowed_origins(allowed_origins(config))
@@ -213,12 +216,9 @@ pub fn streamable_http_service(
 const SCHEMA_RESOURCE_URI: &str = "unifi://schema/mcp-tool";
 
 fn schema_resource() -> Resource {
-    Resource::new(
-        RawResource::new(SCHEMA_RESOURCE_URI, "unifi tool schema")
-            .with_description("JSON schema for the unifi MCP tool and its action-based parameters")
-            .with_mime_type("application/json"),
-        None,
-    )
+    Resource::new(SCHEMA_RESOURCE_URI, "unifi tool schema")
+        .with_description("JSON schema for the unifi MCP tool and its action-based parameters")
+        .with_mime_type("application/json")
 }
 
 // ── tool definition conversion ────────────────────────────────────────────────
@@ -254,7 +254,7 @@ fn rmcp_tool_from_json(value: Value) -> Result<Tool, ErrorData> {
 fn tool_result_from_json(value: Value) -> Result<CallToolResult, ErrorData> {
     let text = serde_json::to_string_pretty(&value)
         .map_err(|e| ErrorData::internal_error(format!("serialization error: {e}"), None))?;
-    Ok(CallToolResult::success(vec![Content::text(text)]))
+    Ok(CallToolResult::success(vec![ContentBlock::text(text)]))
 }
 
 // ── auth helpers ──────────────────────────────────────────────────────────────
@@ -347,10 +347,10 @@ pub(super) fn allowed_origins(config: &McpConfig) -> Vec<String> {
         format!("http://127.0.0.1:{}", config.port),
     ];
     origins.extend(config.allowed_origins.iter().cloned());
-    if let Some(public_url) = config.auth.public_url.as_deref() {
-        if let Some(origin) = extract_origin(public_url) {
-            origins.push(origin);
-        }
+    if let Some(public_url) = config.auth.public_url.as_deref()
+        && let Some(origin) = extract_origin(public_url)
+    {
+        origins.push(origin);
     }
     origins.sort();
     origins.dedup();

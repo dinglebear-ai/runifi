@@ -1,10 +1,10 @@
 pub mod doctor;
 
-use anyhow::{bail, Result};
-use serde_json::{json, Value};
+use anyhow::{Result, bail};
+use serde_json::{Value, json};
 
 use unifi::UnifiService;
-use unifi::{capabilities::find_capability, ActionRequest};
+use unifi::{ActionRequest, capabilities::find_capability};
 
 // ── command enum ──────────────────────────────────────────────────────────────
 

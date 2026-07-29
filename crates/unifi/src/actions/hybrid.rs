@@ -1,5 +1,5 @@
-use anyhow::{bail, Result};
-use serde_json::{json, Value};
+use anyhow::{Result, bail};
+use serde_json::{Value, json};
 
 pub fn resolve(action: &str, params: &Value) -> Result<(&'static str, Value)> {
     let prefer = params
@@ -47,9 +47,5 @@ fn normalize_params(params: &Value) -> Value {
     if let Some(object) = value.as_object_mut() {
         object.remove("prefer");
     }
-    if value.is_null() {
-        json!({})
-    } else {
-        value
-    }
+    if value.is_null() { json!({}) } else { value }
 }
