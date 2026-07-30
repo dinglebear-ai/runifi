@@ -34,7 +34,7 @@ function releaseVersion(env = process.env) {
 }
 
 function releaseBaseUrl(env = process.env) {
-  const repo = env.UNIFI_RMCP_REPO || "jmagar/runifi";
+  const repo = env.UNIFI_RMCP_REPO || "dinglebear-ai/runifi";
   return env.UNIFI_RMCP_RELEASE_BASE_URL || `https://github.com/${repo}/releases/download`;
 }
 

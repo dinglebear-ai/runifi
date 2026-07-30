@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct UnifiConfig {
-    /// Controller base URL, e.g. https://unifi.local (UNIFI_URL).
+    /// Controller base URL, e.g. <https://unifi.local> (`UNIFI_URL`).
     pub url: String,
     /// API key for the X-API-KEY header (UNIFI_API_KEY).
     pub api_key: String,

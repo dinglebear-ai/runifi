@@ -1,3 +1,9 @@
+---
+title: "CI/CD Workflows -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # CI/CD Workflows -- syslog-mcp
 
 GitHub Actions configuration for syslog-mcp.

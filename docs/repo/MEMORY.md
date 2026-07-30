@@ -1,3 +1,9 @@
+---
+title: "Memory Files -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Memory Files -- syslog-mcp
 
 Claude Code memory system for persistent knowledge across sessions.

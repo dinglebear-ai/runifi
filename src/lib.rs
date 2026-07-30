@@ -1,3 +1,5 @@
+//! UniFi Network MCP server and shared application wiring.
+
 pub mod app {
     pub use unifi::UnifiService;
 }

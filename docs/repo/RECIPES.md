@@ -1,3 +1,9 @@
+---
+title: "Justfile Recipes -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Justfile Recipes -- syslog-mcp
 
 Run `just --list` to see all available recipes.

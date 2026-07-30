@@ -1,3 +1,9 @@
+---
+title: "Common MCP Code Patterns -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Common MCP Code Patterns -- syslog-mcp
 
 Reusable patterns in the syslog-mcp implementation.

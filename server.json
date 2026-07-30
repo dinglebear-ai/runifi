@@ -2,11 +2,11 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "ai.dinglebear/unifi-rmcp",
   "title": "UniFi RMCP",
-  "description": "Rust MCP server and CLI for UniFi Network controller operations.",
+  "description": "MCP server and CLI for UniFi Network controllers: clients, devices, WLANs, firewall, and health over stdio or streamable HTTP, with auth.",
   "version": "0.2.5",
-  "websiteUrl": "https://github.com/jmagar/runifi",
+  "websiteUrl": "https://runifi.dinglebear.ai",
   "repository": {
-    "url": "https://github.com/jmagar/runifi",
+    "url": "https://github.com/dinglebear-ai/runifi",
     "source": "github",
     "id": "1238227294"
   },
@@ -68,8 +68,8 @@
           "format": "string",
           "isRequired": false,
           "isSecret": false,
-          "default": "jmagar/runifi",
-          "placeholder": "jmagar/runifi"
+          "default": "dinglebear-ai/runifi",
+          "placeholder": "dinglebear-ai/runifi"
         },
         {
           "name": "UNIFI_RMCP_RELEASE_BASE_URL",
@@ -103,7 +103,7 @@
       },
       "buildInfo": {
         "version": "0.2.5",
-        "repository": "https://github.com/jmagar/runifi"
+        "repository": "https://github.com/dinglebear-ai/runifi"
       }
     }
   }

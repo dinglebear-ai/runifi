@@ -1,3 +1,9 @@
+---
+title: "UniFi Endpoint Verification"
+created: 2026-07-05
+updated: 2026-07-30
+---
+
 # UniFi Endpoint Verification
 
 `cargo run -p xtask -- verify-api-endpoints --mode contract` accounts for registry, path, auth-scope, and request-policy coverage without network access.

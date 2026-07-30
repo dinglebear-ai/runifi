@@ -1,3 +1,9 @@
+---
+title: "Plugin Checklist -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Plugin Checklist -- syslog-mcp
 
 Pre-release and quality checklist. Complete all items before tagging a release.

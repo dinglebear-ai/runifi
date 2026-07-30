@@ -1,3 +1,9 @@
+---
+title: "Coding Rules -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Coding Rules -- syslog-mcp
 
 Standards and conventions enforced across the repository.

@@ -1,3 +1,5 @@
+//! UniFi Network API client and action dispatch primitives.
+
 pub mod actions;
 pub mod api;
 pub mod capabilities;

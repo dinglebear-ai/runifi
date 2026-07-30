@@ -1,3 +1,9 @@
+---
+title: "rmcp 1.6 axum-extension propagation spike (syslog-mcp-brt0.10)"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # rmcp 1.6 axum-extension propagation spike (syslog-mcp-brt0.10)
 
 ## Outcome

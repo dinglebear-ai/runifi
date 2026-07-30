@@ -1,3 +1,9 @@
+---
+title: "MCP UI Patterns -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # MCP UI Patterns -- syslog-mcp
 
 Protocol-level UI hints for MCP servers to improve client-side rendering of tools and results.

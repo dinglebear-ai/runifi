@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="${UNIFI_RMCP_REPO:-jmagar/runifi}"
+REPO="${UNIFI_RMCP_REPO:-dinglebear-ai/runifi}"
 INSTALL_DIR="${INSTALL_DIR:-${HOME}/.local/bin}"
 VERSION="${UNIFI_RMCP_VERSION:-latest}"
 RELEASE_BASE_URL="${UNIFI_RMCP_RELEASE_BASE_URL:-}"
@@ -14,7 +14,7 @@ Install runifi from GitHub Releases.
 Environment:
   INSTALL_DIR      Destination directory (default: ~/.local/bin)
   UNIFI_RMCP_VERSION Release tag such as v0.2.0 (default: latest)
-  UNIFI_RMCP_REPO    GitHub repo owner/name (default: jmagar/runifi)
+  UNIFI_RMCP_REPO    GitHub repo owner/name (default: dinglebear-ai/runifi)
 USAGE
 }
 

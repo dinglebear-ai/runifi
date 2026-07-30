@@ -1,3 +1,9 @@
+---
+title: "OAuth Authentication"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # OAuth Authentication
 
 syslog-mcp supports Google OAuth 2.0 as an alternative to the static bearer token. Both modes leave `/health` unauthenticated and honour the same scope-based tool dispatch.
