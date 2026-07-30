@@ -10,22 +10,19 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: release-please-main
+  cancel-in-progress: false
+
 jobs:
   release-please:
-    name: Create or Publish Release
-    if: >
+    name: Create or publish release
+    if: >-
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
-    runs-on: [self-hosted, unraid]
     permissions:
       contents: write
-      issues: write
       pull-requests: write
-
-    steps:
-      - name: Run release-please
-        uses: googleapis/release-please-action@8b8fd2cc23b2e18957157a9d923d75aa0c6f6ad5
-        with:
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
+    uses: dinglebear-ai/workflows/.github/workflows/release-please.yml@eb5f36cf517ffc949aca1c81e2ccbc71b5a85267
+    secrets:
+      RELEASE_PLEASE_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}

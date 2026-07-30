@@ -6,104 +6,89 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  CARGO_TERM_COLOR: always
-  # REQUIRED under a compile wrapper (kache).
-  CARGO_INCREMENTAL: "0"
-  # Persistent per-runner zccache compile store (replaces the old sccache dir).
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  fmt:
-    name: Formatting
-    runs-on: [self-hosted, ci-pool-rust]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust and kache
-        uses: ./.github/actions/setup-rust-kache
-        with:
-          components: rustfmt
-      - name: Check formatting
-        run: cargo fmt -- --check
-
-  clippy:
-    name: Clippy
-    runs-on: [self-hosted, ci-pool-rust]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust and kache
-        uses: ./.github/actions/setup-rust-kache
-        with:
-          components: clippy
-      - name: Clippy
-        run: cargo clippy -- -D warnings
-
-  test:
-    name: Tests
-    runs-on: [self-hosted, ci-pool-rust]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust and kache
-        uses: ./.github/actions/setup-rust-kache
-      - name: Install cargo-nextest
-        uses: taiki-e/install-action@nextest
-      - name: Run tests
-        run: cargo nextest run --profile ci
-      - name: Validate internal reference
-        run: cargo run -p xtask -- validate-internal-reference
-      - name: Verify API endpoint contracts
-        run: cargo run -p xtask -- verify-api-endpoints --mode contract
-      - name: Check repository guardrails
-        run: cargo run -p xtask -- check-forbidden-strings
-
-  toml:
-    name: TOML Format
-    runs-on: [self-hosted, ci-pool-ops]
-    steps:
-      - uses: actions/checkout@v4
-
-      # Fails when Cargo.toml, package.json and server.json disagree on the
-      # version. The previous 87-line variant here never read server.json, so
-      # it reported OK while a sibling repo sat a release out of sync.
-      - name: Check version sync
-        run: bash scripts/check-version-sync.sh
-      # Same gap as the audit job: no toolchain on the unraid self-hosted
-      # image, so `cargo install` died with "cargo: command not found".
-      - name: Install Rust and kache
-        uses: ./.github/actions/setup-rust-kache
-      - name: Install taplo
-        run: cargo install taplo-cli --locked
-      - name: Check TOML formatting
-        run: taplo check
-
-  audit:
-    name: Security Audit
-    runs-on: [self-hosted, ci-pool-rust]
-    permissions:
-      contents: read
-      checks: write
-    steps:
-      - uses: actions/checkout@v4
-      # rustsec/audit-check shells out to cargo. The unraid self-hosted image
-      # has no toolchain on PATH, so without this the job dies with
-      # "Unable to locate executable file: cargo". Every other job here already
-      # installs the toolchain this way.
-      - name: Install Rust and kache
-        uses: ./.github/actions/setup-rust-kache
-      - uses: rustsec/audit-check@v2.0.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+  rust:
+    name: Rust
+    uses: dinglebear-ai/workflows/.github/workflows/fast-rust.yml@eb5f36cf517ffc949aca1c81e2ccbc71b5a85267
+    with:
+      kache-manifest-key: runifi-fast-rust
+      test-command: >-
+        cargo test --workspace --locked &&
+        cargo run -p xtask -- validate-internal-reference &&
+        cargo run -p xtask -- verify-api-endpoints --mode contract &&
+        cargo run -p xtask -- check-forbidden-strings
+    secrets:
+      KACHE_S3_ACCESS_KEY: ${{ secrets.KACHE_S3_ACCESS_KEY }}
+      KACHE_S3_SECRET_KEY: ${{ secrets.KACHE_S3_SECRET_KEY }}
 
   npm:
     name: npm launcher
-    runs-on: [self-hosted, ci-pool-typescript]
+    uses: dinglebear-ai/workflows/.github/workflows/fast-node.yml@eb5f36cf517ffc949aca1c81e2ccbc71b5a85267
+    with:
+      working-directory: packages/unifi-rmcp
+      cache-dependency-path: packages/unifi-rmcp/package.json
+      enable-cache: false
+      install-command: "true"
+      audit-command: ""
+      lint-command: ""
+      typecheck-command: ""
+      test-command: npm test
+      contract-command: >-
+        npm run check &&
+        npm pack --dry-run --json &&
+        cd ../.. &&
+        npx --yes @taplo/cli@0.7.0 lint
+
+  repository:
+    name: Repository policy
+    uses: dinglebear-ai/workflows/.github/workflows/fast-ops.yml@eb5f36cf517ffc949aca1c81e2ccbc71b5a85267
+    with:
+      shell-globs: "entrypoint.sh scripts/*.sh"
+      policy-command: bash scripts/check-version-sync.sh
+
+  security:
+    name: Rust security
+    uses: dinglebear-ai/workflows/.github/workflows/rust-security.yml@eb5f36cf517ffc949aca1c81e2ccbc71b5a85267
+
+  contract:
+    name: Fleet contract
+    uses: dinglebear-ai/workflows/.github/workflows/fleet-contract.yml@eb5f36cf517ffc949aca1c81e2ccbc71b5a85267
+    with:
+      profile: rust
+      implementation-ref: eb5f36cf517ffc949aca1c81e2ccbc71b5a85267
+
+  workflow-policy:
+    name: Fleet policy
+    uses: dinglebear-ai/workflows/.github/workflows/fleet-policy.yml@eb5f36cf517ffc949aca1c81e2ccbc71b5a85267
+    with:
+      release-file-regex: '(^|/)([^/]*-)?(release|publish|deploy)[^/]*\.ya?ml$'
+
+  ci-gate:
+    name: CI Gate
+    if: always()
+    needs: [rust, npm, repository, security, contract, workflow-policy]
+    runs-on: [self-hosted, ci-pool-ops]
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Test npm launcher
-        run: npm test --prefix packages/unifi-rmcp
-      - name: Check npm launcher syntax
-        run: npm run check --prefix packages/unifi-rmcp
-      - name: Dry-run npm package
-        run: npm pack --dry-run --json ./packages/unifi-rmcp
+      - name: Require every CI lane
+        env:
+          RUST: ${{ needs.rust.result }}
+          NPM: ${{ needs.npm.result }}
+          REPOSITORY: ${{ needs.repository.result }}
+          SECURITY: ${{ needs.security.result }}
+          CONTRACT: ${{ needs.contract.result }}
+          WORKFLOW_POLICY: ${{ needs.workflow-policy.result }}
+        run: |
+          test "$RUST" = success
+          test "$NPM" = success
+          test "$REPOSITORY" = success
+          test "$SECURITY" = success
+          test "$CONTRACT" = success
+          test "$WORKFLOW_POLICY" = success

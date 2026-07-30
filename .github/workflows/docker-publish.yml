@@ -24,7 +24,7 @@ jobs:
       id-token: write
       attestations: write
       security-events: write
-    uses: dinglebear-ai/workflows/.github/workflows/hosted-container-release.yml@d7bbe71ddc1157e32ed0bebf928fc07438ba58b0
+    uses: dinglebear-ai/workflows/.github/workflows/hosted-container-release.yml@eb5f36cf517ffc949aca1c81e2ccbc71b5a85267
     with:
       checkout-ref: ${{ github.event.release.tag_name }}
       image: ghcr.io/dinglebear-ai/runifi
