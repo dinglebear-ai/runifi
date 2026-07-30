@@ -8,6 +8,12 @@ BINARY="/usr/local/bin/${SERVICE_NAME}"
 
 DATA_DIR="${DATA_DIR:-/data}"
 
+case "${1:-}" in
+    --help|-h|--version|-V|version)
+        exec gosu 1000:1000 "${BINARY}" "$@"
+        ;;
+esac
+
 # Load mounted runtime config before validation. The Rust binary also loads
 # /data/.env, but entrypoint validates required vars first.
 if [ -f "${DATA_DIR}/.env" ]; then

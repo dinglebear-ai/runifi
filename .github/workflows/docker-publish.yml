@@ -3,91 +3,117 @@ name: Build and Push Docker Image
 on:
   release:
     types: [published]
-  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: container-release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: dinglebear-ai/runifi
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    env:
-      MCP_PRIVATE_KEY: ${{ secrets.MCP_PRIVATE_KEY }}
+  container:
+    name: Build, scan, attest, and publish
     permissions:
       contents: read
       packages: write
+      id-token: write
+      attestations: write
       security-events: write
+    uses: dinglebear-ai/workflows/.github/workflows/hosted-container-release.yml@d7bbe71ddc1157e32ed0bebf928fc07438ba58b0
+    with:
+      checkout-ref: ${{ github.event.release.tag_name }}
+      image: ghcr.io/dinglebear-ai/runifi
+      release-tag: ${{ github.event.release.tag_name }}
+      dockerfile: config/Dockerfile
+      smoke-command: docker run --rm "$IMAGE_REF" --version
+      cache-scope: runifi-release
+      timeout-minutes: 60
+    secrets:
+      REGISTRY_USERNAME: ${{ github.actor }}
+      REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  promote-tags:
+    name: Promote release aliases
+    needs: container
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      packages: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: config/Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          sbom: true
-          provenance: mode=max
-
-      - name: Scan image for vulnerabilities
-        uses: aquasecurity/trivy-action@v0.35.0
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-
-      - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-results.sarif'
-        continue-on-error: true
-
-      - name: Install mcp-publisher
-        if: startsWith(github.ref, 'refs/tags/v') && env.MCP_PRIVATE_KEY != ''
+      - name: Promote the verified digest
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "::error::release tag must be vMAJOR.MINOR.PATCH"
+            exit 1
+          }
+          minor="${version%.*}"
+          major="${version%%.*}"
+          image="${REGISTRY}/${IMAGE_NAME}"
+          digest="$(docker buildx imagetools inspect "${image}:${RELEASE_TAG}" --format '{{.Manifest.Digest}}')"
+          short_sha="${GITHUB_SHA:0:7}"
+          for tag in "$version" "$minor" "$major" latest "sha-${short_sha}"; do
+            docker buildx imagetools create --tag "${image}:${tag}" "${image}@${digest}"
+          done
 
+  mcp-registry:
+    name: Publish MCP Registry
+    needs: container
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      MCP_PRIVATE_KEY: ${{ secrets.MCP_PRIVATE_KEY }}
+    steps:
+      - name: Checkout released source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
+      - name: Verify registry manifest version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          test "$(jq -r .version server.json)" = "$version"
+      - name: Install checksum-pinned MCP publisher v1.8.0
+        if: env.MCP_PRIVATE_KEY != ''
+        run: |
+          set -euo pipefail
+          archive=mcp-publisher_linux_amd64.tar.gz
+          curl --fail --silent --show-error --location \
+            "https://github.com/modelcontextprotocol/registry/releases/download/v1.8.0/${archive}" \
+            --output "$archive"
+          printf '%s  %s\n' \
+            1370446bbe74d562608e8005a6ccce02d146a661fbd78674e11cc70b9618d6cf \
+            "$archive" | sha256sum --check --strict
+          tar --extract --gzip --file "$archive" mcp-publisher
+          test "$(./mcp-publisher --version 2>&1 | grep -o '1\.8\.0' | head -n1)" = "1.8.0"
       - name: Authenticate to MCP Registry
-        if: startsWith(github.ref, 'refs/tags/v') && env.MCP_PRIVATE_KEY != ''
+        if: env.MCP_PRIVATE_KEY != ''
         run: ./mcp-publisher login dns --domain tootie.tv --private-key "$MCP_PRIVATE_KEY"
-
       - name: Publish to MCP Registry
-        if: startsWith(github.ref, 'refs/tags/v') && env.MCP_PRIVATE_KEY != ''
+        if: env.MCP_PRIVATE_KEY != ''
         run: ./mcp-publisher publish
-
       - name: Skip MCP Registry publish
-        if: startsWith(github.ref, 'refs/tags/v') && env.MCP_PRIVATE_KEY == ''
+        if: env.MCP_PRIVATE_KEY == ''
         run: echo "::notice::MCP_PRIVATE_KEY is not configured; skipping MCP Registry publish"
