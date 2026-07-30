@@ -1,3 +1,9 @@
+---
+title: "Setup Guide -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Setup Guide -- syslog-mcp
 
 Step-by-step instructions to get syslog-mcp running locally, in Docker, or as a Claude Code plugin.

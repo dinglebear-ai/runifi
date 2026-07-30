@@ -1,7 +1,7 @@
 # unifi-rmcp
 
-`unifi-rmcp` is a Rust MCP server and CLI for managing Ubiquiti UniFi Network
-controllers through official, internal, and hybrid UniFi API actions.
+MCP server and CLI for UniFi Network controllers: clients, devices, WLANs,
+firewall, and health over stdio or streamable HTTP, with auth.
 
 It exposes one MCP tool, `unifi`, plus the `runifi` CLI. Agents can inspect
 clients, devices, WiFi networks, health, alarms, events, controller sysinfo, and
@@ -85,10 +85,10 @@ the short Rust CLI name `runifi`.
 | Path | Command | Best for | Notes |
 |---|---|---|---|
 | npm / npx | `npx -y unifi-rmcp --help` | Local MCP clients and quick trials. | Downloads the matching `runifi` binary from GitHub Releases. |
-| Release installer | `curl -fsSL https://raw.githubusercontent.com/jmagar/runifi/main/scripts/install.sh \| bash` | Host installs without Node. | Installs `runifi` for the current Linux host. |
+| Release installer | `curl -fsSL https://raw.githubusercontent.com/dinglebear-ai/runifi/main/scripts/install.sh \| bash` | Host installs without Node. | Installs `runifi` for the current Linux host. |
 | Docker / Compose | `docker compose up -d` | Shared HTTP MCP deployments. | Reads `.env` and exposes container port `40030`. |
 | Build from source | `cargo build --release` | Development and audits. | Produces `target/release/runifi`. |
-| Plugin | `claude plugin install plugins/unifi` | Claude Code local plugin setup from this checkout. | Uses the packaged setup hook, skill, and local runtime metadata. |
+| Plugin | `claude plugin install plugins/unifi` | Claude Code local plugin setup from this checkout. | Ships the skill and `.mcp.json`. No session hooks — plugin settings reach the server through `.mcp.json`'s `${user_config.*}` env block, so no manual setup step is needed. |
 
 ### npm / npx
 
@@ -113,13 +113,16 @@ behavior only when testing packaging:
 ### Build From Source
 
 ```bash
-git clone https://github.com/jmagar/runifi
-cd unifi-rmcp
+git clone git@github.com:dinglebear-ai/runifi.git
+cd runifi
 cargo build --release
 ./target/release/runifi --help
 ```
 
-Minimum supported Rust version: 1.86.
+Minimum supported Rust version: 1.86. The Cargo workspace has three members:
+the root `unifi-rmcp` package, `crates/unifi` (reusable core), and `xtask`
+(dev tooling). All members inherit Rust edition 2024 and MSRV 1.97.1 from the
+workspace root.
 
 ## Quickstart
 
@@ -248,7 +251,21 @@ as action arguments.
 ## MCP Tool Reference
 
 One MCP tool is exposed: `unifi`. Pass the required `action` argument to select
-the operation.
+the operation. The action enum is generated from the inventories in `data/`, so
+the surface is large:
+
+| Family | Actions | Mutating |
+|---|---:|---:|
+| `official_*` | 78 | 36 |
+| `unifi_*` | 175 | 87 |
+| Preserved convenience | 8 | 0 |
+| Hybrid aliases | 5 | 0 |
+| `help` | 1 | 0 |
+| **Total** | **267** | **123** |
+
+Counts are derived from `data/unifi_official_network_v10_3_58.json` and the
+`runtime: true` entries of `data/unifi_internal_endpoint_models.json`.
+`crates/unifi/src/capabilities.rs` is the source of truth at runtime.
 
 ### Preserved Convenience Actions
 
@@ -294,14 +311,27 @@ runifi list_clients --param siteId=<uuid> --json
 runifi doctor [--json]
 runifi setup check [--json]
 runifi setup repair [--json]
+runifi setup install [--json]
+runifi setup plugin-hook [--no-repair] [--json]
 ```
 
 Generated actions accept `--param k=v`, `--body-json JSON`, and `--json`.
 
+`setup plugin-hook` maps `CLAUDE_PLUGIN_OPTION_*` env vars into `UNIFI_*`,
+refreshes the `~/.local/bin` copy of the binary, and runs check + repair. It
+used to run automatically from a Claude Code `SessionStart`/`ConfigChange`
+hook; those hooks have been removed.
+
+You do **not** need to run it to configure the plugin: `plugins/unifi/.mcp.json`
+maps your plugin settings into the server's environment directly via
+`${user_config.*}`. Run it by hand only when you want the `~/.local/bin` binary
+refresh or the preflight checks.
+
 ## Configuration
 
-Host installs read `~/.unifi-rmcp/.env` before loading config. Containers read
-`/data/.env`. Process environment overrides both.
+Configuration loads from `config.toml` first, then `UNIFI_*` environment
+variables override it. Host installs read `~/.unifi-rmcp/.env` before loading
+config; containers read `/data/.env`. Process environment overrides both.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -313,15 +343,31 @@ Host installs read `~/.unifi-rmcp/.env` before loading config. Containers read
 | `UNIFI_LEGACY` | `false` | Legacy controller mode without `/proxy/network` prefix. |
 | `UNIFI_MCP_HOST` | `0.0.0.0` | HTTP bind host. |
 | `UNIFI_MCP_PORT` | `40030` | HTTP bind port. |
-| `UNIFI_MCP_SERVER_NAME` | `unifi-rmcp` | Advertised MCP server name. |
 | `UNIFI_MCP_TOKEN` | unset | Static bearer token for HTTP MCP. |
 | `UNIFI_MCP_NO_AUTH` | `false` | Disable auth only for loopback development. |
+| `UNIFI_MCP_DISABLE_HTTP_AUTH` | `false` | Compatibility alias for `UNIFI_MCP_NO_AUTH`. |
 | `UNIFI_NOAUTH` | `false` | Trust an upstream gateway to enforce auth. |
+| `UNIFI_MCP_ALLOWED_HOSTS` | empty | Comma-separated `Host` header allowlist. |
+| `UNIFI_MCP_ALLOWED_ORIGINS` | empty | Comma-separated CORS `Origin` allowlist. |
 | `UNIFI_MCP_PUBLIC_URL` | unset | Public URL for OAuth metadata. |
 | `UNIFI_MCP_AUTH_MODE` | `bearer` | `bearer` or `oauth`. |
 | `UNIFI_MCP_GOOGLE_CLIENT_ID` | unset | Google OAuth client ID. |
 | `UNIFI_MCP_GOOGLE_CLIENT_SECRET` | unset | Google OAuth client secret. |
 | `UNIFI_MCP_AUTH_ADMIN_EMAIL` | unset | Admin email for OAuth bootstrap. |
+| `UNIFI_MCP_AUTH_SQLITE_PATH` | `/data/auth.db` | OAuth state database path. |
+| `UNIFI_MCP_AUTH_KEY_PATH` | `/data/auth-jwt.pem` | OAuth JWT signing key path. |
+| `UNIFI_MCP_HOME` | `~/.unifi-rmcp` | Appdata dir override; read by `setup` only. |
+
+`config.toml`-only settings with no environment override: `mcp.server_name`
+and the `[mcp.auth]` TTL, rate-limit, and allowlist fields
+(`access_token_ttl_secs`, `refresh_token_ttl_secs`, `auth_code_ttl_secs`,
+`register_rpm`, `authorize_rpm`, `disable_static_token_with_oauth`,
+`allowed_emails`, `allowed_client_redirect_uris`). See `config.example.toml`.
+
+`xtask` endpoint verification reads its own variables that the server never
+touches: `UNIFI_ALLOW_INSECURE_TLS`, `UNIFI_RESOLVE_IP`,
+`UNIFI_VERIFY_TIMEOUT_SECS`, `UNIFI_VERIFY_RATE_LIMIT_MS`,
+`UNIFI_VERIFY_MAX_REQUESTS`, `UNIFI_VERIFY_UNVERIFIED_INTERNAL`.
 
 ## Authentication
 
@@ -374,9 +420,15 @@ CLI shim       (src/cli.rs)            argv -> service -> stdout
 - GitHub Releases publish the `runifi` binary consumed by the npm launcher.
 - The npm package name is `unifi-rmcp`; binary aliases are `unifi-rmcp` and
   `runifi`.
-- Docker/OCI metadata uses `ghcr.io/jmagar/runifi:<version>`.
+- Docker/OCI metadata uses `ghcr.io/dinglebear-ai/runifi:<version>`. The GHCR
+  namespace still reads `jmagar` because that is what
+  `.github/workflows/docker-publish.yml` publishes; the git remote is
+  `dinglebear-ai/runifi`. Do not "fix" one without the other.
 - `plugins/unifi/.mcp.json` must launch `npx -y unifi-rmcp mcp` so stdio
   clients start the MCP transport rather than the HTTP server.
+- `plugins/unifi/` ships no Claude Code hooks. `scripts/validate-plugin-layout.sh`
+  and `tests/setup_cli.rs` both fail if a `hooks/` directory or a manifest
+  `hooks` key reappears.
 - The root README is curated. Source of truth for current actions and generated
   endpoint coverage is `src/capabilities.rs`, the `data/` inventories,
   `docs/unifi_api_coverage.md`, and `docs/unifi_endpoint_verification.md`.
@@ -394,10 +446,11 @@ npm --prefix packages/unifi-rmcp run check
 ## Verification
 
 ```bash
-python3 /home/jmagar/workspace/soma/scripts/check-readme-guide.py README.md
 npm --prefix packages/unifi-rmcp run check
 cargo check
 cargo test
+cargo clippy -- -D warnings
+just validate-plugin
 cargo run -p xtask -- verify-api-endpoints --mode contract
 git diff --check
 ```
@@ -446,19 +499,20 @@ gateway.
 
 ## Related Servers
 
-- [soma](https://github.com/jmagar/soma) - RMCP runtime for provider-backed MCP servers.
-- [tailscale-rmcp](https://github.com/jmagar/rtailscale) - Tailscale API bridge for devices, users, and tailnet operations.
-- [unraid-rmcp](https://github.com/jmagar/runraid) - Unraid GraphQL bridge for NAS and server management.
-- [apprise-rmcp](https://github.com/jmagar/rapprise) - Apprise notification fan-out bridge for many delivery backends.
-- [gotify-rmcp](https://github.com/jmagar/rgotify) - Gotify push notification bridge for sends, messages, apps, and clients.
-- [arcane-rmcp](https://github.com/jmagar/rarcane) - Arcane Docker management bridge for containers and related resources.
-- [yarr](https://github.com/jmagar/yarr) - Media-stack bridge for Sonarr, Radarr, Prowlarr, Plex, and related services.
-- [ytdl-rmcp](https://github.com/jmagar/rytdl) - Media download and metadata workflow server.
-- [synapse-rmcp](https://github.com/jmagar/synapse) - Local Synapse workflow server for scout and flux actions.
-- [cortex](https://github.com/jmagar/cortex) - Syslog and homelab log aggregation MCP server.
-- [axon](https://github.com/jmagar/axon) - RAG, crawl, scrape, extract, and semantic search project.
-- [labby](https://github.com/jmagar/labby) - Homelab control plane and MCP gateway project.
-- [lumen](https://github.com/jmagar/lumen) - Local semantic code search MCP server.
+All sibling servers live under the `dinglebear-ai` org.
+
+- [soma](https://github.com/dinglebear-ai/soma) - RMCP runtime and scaffold for provider-backed MCP servers.
+- [rtailscale](https://github.com/dinglebear-ai/rtailscale) - Tailscale API bridge for devices, users, and tailnet operations.
+- [unraid](https://github.com/dinglebear-ai/unraid) - Unraid monorepo; `unraid-rs/` is the GraphQL bridge (binary `runraid`).
+- [rapprise](https://github.com/dinglebear-ai/rapprise) - Apprise notification fan-out bridge for many delivery backends.
+- [rgotify](https://github.com/dinglebear-ai/rgotify) - Gotify push notification bridge for sends, messages, apps, and clients.
+- [rarcane](https://github.com/dinglebear-ai/rarcane) - Arcane Docker management bridge for containers and related resources.
+- [yarr](https://github.com/dinglebear-ai/yarr) - Media-stack bridge for Sonarr, Radarr, Prowlarr, Plex, and related services.
+- [rytdl](https://github.com/dinglebear-ai/rytdl) - Media download and metadata workflow server.
+- [synapse](https://github.com/dinglebear-ai/synapse) - Local Synapse workflow server for scout and flux actions.
+- [cortex](https://github.com/dinglebear-ai/cortex) - Syslog and homelab log aggregation MCP server.
+- [axon](https://github.com/dinglebear-ai/axon) - RAG, crawl, scrape, extract, and semantic search project.
+- [labby](https://github.com/dinglebear-ai/labby) - Homelab control plane and MCP gateway project.
 
 ## Documentation
 

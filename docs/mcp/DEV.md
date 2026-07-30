@@ -1,3 +1,9 @@
+---
+title: "Development Workflow -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Development Workflow -- syslog-mcp
 
 Day-to-day development guide for the syslog-mcp server.

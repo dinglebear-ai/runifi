@@ -1,8 +1,8 @@
 {
   "name": "rustifi",
-  "description": "UniFi network MCP server for Codex — official, internal, and hybrid UniFi Network actions.",
-  "homepage": "https://github.com/jmagar/runifi",
-  "repository": "https://github.com/jmagar/runifi",
+  "description": "MCP server and CLI for UniFi Network controllers: clients, devices, WLANs, firewall, and health over stdio or streamable HTTP, with auth.",
+  "homepage": "https://runifi.dinglebear.ai",
+  "repository": "https://github.com/dinglebear-ai/runifi",
   "license": "MIT",
   "keywords": [
     "unifi",
@@ -22,7 +22,7 @@
       "Read",
       "Write"
     ],
-    "websiteURL": "https://github.com/jmagar/runifi",
+    "websiteURL": "https://runifi.dinglebear.ai",
     "defaultPrompt": [
       "Who is currently connected to my network? Show me all clients with their IP addresses.",
       "Are all my UniFi devices online? Show me access point and switch status.",
@@ -31,8 +31,8 @@
     "brandColor": "#2563EB"
   },
   "author": {
-    "name": "Jacob Magar",
-    "email": "jmagar@users.noreply.github.com",
-    "url": "https://github.com/jmagar"
+    "name": "dinglebear.ai",
+    "email": "hello@dinglebear.ai",
+    "url": "https://dinglebear.ai"
   }
 }

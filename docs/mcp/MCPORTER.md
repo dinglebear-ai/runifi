@@ -1,3 +1,9 @@
+---
+title: "Live Smoke Testing (mcporter) -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Live Smoke Testing (mcporter) -- syslog-mcp
 
 End-to-end verification against a running syslog-mcp server. Complements unit tests in [TESTS.md](TESTS.md).

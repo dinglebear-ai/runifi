@@ -1,3 +1,9 @@
+---
+title: "syslog-mcp expansion · session bootstrap"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # syslog-mcp expansion · session bootstrap
 
 > Briefing doc to load at session start. Captures fleet topology, current

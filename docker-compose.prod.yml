@@ -20,7 +20,7 @@ x-common-service: &common-service
 services:
   unifi-rmcp:
     <<: *common-service
-    image: ghcr.io/jmagar/unifi-rmcp:latest
+    image: ghcr.io/dinglebear-ai/runifi:latest
     container_name: runifi
     # entrypoint.sh runs as root and drops to 1000:1000 via gosu.
     # Do not set user: here; entrypoint needs root to chown /data.

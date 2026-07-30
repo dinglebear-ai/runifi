@@ -1,3 +1,9 @@
+---
+title: "Security Guardrails -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Security Guardrails -- syslog-mcp
 
 Safety and security patterns enforced across syslog-mcp.

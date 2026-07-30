@@ -16,24 +16,16 @@ full parity.
 | Remote | `git@github.com:dinglebear-ai/runifi.git` |
 | Default branch | `main` |
 | Cargo workspace | 3 members: `.` (root), `crates/unifi`, `xtask` |
-| Root package | `unifi-rmcp` (edition 2021) |
+| Root package | `unifi-rmcp` (edition 2024) |
 | Binary / CLI | `runifi` |
 | MCP tool | `unifi` |
 | Service port | **40030** |
-| MSRV | 1.86 |
+| MSRV | 1.97.1 |
 | npm package | `unifi-rmcp` |
 
-**Editions are not uniform.** Root and `crates/unifi` are edition 2021;
-`xtask` is edition 2024. `src/setup.rs` relies on edition-2021 semantics
-(`std::env::set_var` without an `unsafe` block) — bumping the root to 2024
-requires touching `apply_plugin_options()`.
-
-### rmcp version — trust the lock, not the manifest
-
-`Cargo.toml` declares `rmcp = "1.6.0"`, but the caret range has already
-drifted: **`Cargo.lock` resolves rmcp 1.8.0**. runifi is the only repo in the
-fleet on 1.8 (most siblings are on 1.7.0 or 2.2.0). The declared version is
-fiction — read `Cargo.lock` before reasoning about rmcp API surface.
+All three members inherit edition 2024, Rust 1.97.1, package metadata, shared
+dependencies, and the workspace lint policy. `rmcp` is exactly pinned to
+`=3.0.0-beta.2`, matching `Cargo.lock`; do not replace it with a caret range.
 
 `lab-auth` is a pinned git dependency on `dinglebear-ai/labby` (rev
 `87cec32`), already repointed off the dead `jmagar/lab.git` URL.

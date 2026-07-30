@@ -1,3 +1,9 @@
+---
+title: "Connect to MCP -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Connect to MCP -- syslog-mcp
 
 How to connect to the syslog-mcp server from every supported client.

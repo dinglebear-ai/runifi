@@ -1,3 +1,9 @@
+---
+title: "Environment Variable Reference -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Environment Variable Reference -- syslog-mcp
 
 Concise reference. See [CONFIG.md](../CONFIG.md) for full documentation including config.toml overlay and validation rules.

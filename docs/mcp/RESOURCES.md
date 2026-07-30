@@ -1,3 +1,9 @@
+---
+title: "MCP Resources Reference -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # MCP Resources Reference -- syslog-mcp
 
 ## Overview

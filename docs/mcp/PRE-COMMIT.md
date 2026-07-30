@@ -1,3 +1,9 @@
+---
+title: "Pre-commit Hook Configuration -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Pre-commit Hook Configuration -- syslog-mcp
 
 Hooks run as Claude Code lifecycle hooks via `hooks/hooks.json`.

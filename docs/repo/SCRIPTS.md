@@ -1,3 +1,9 @@
+---
+title: "Scripts Reference -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Scripts Reference -- syslog-mcp
 
 Scripts used for maintenance, hooks, and testing.

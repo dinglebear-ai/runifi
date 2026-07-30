@@ -1,7 +1,7 @@
 # unifi-rmcp
 
-`unifi-rmcp` is a Rust MCP server and CLI for managing Ubiquiti UniFi Network
-controllers through official, internal, and hybrid UniFi API actions.
+MCP server and CLI for UniFi Network controllers: clients, devices, WLANs,
+firewall, and health over stdio or streamable HTTP, with auth.
 
 It exposes one MCP tool, `unifi`, plus the `runifi` CLI. Agents can inspect
 clients, devices, WiFi networks, health, alarms, events, controller sysinfo, and
@@ -121,8 +121,8 @@ cargo build --release
 
 Minimum supported Rust version: 1.86. The Cargo workspace has three members:
 the root `unifi-rmcp` package, `crates/unifi` (reusable core), and `xtask`
-(dev tooling). Root and `crates/unifi` are edition 2021; `xtask` is edition
-2024.
+(dev tooling). All members inherit Rust edition 2024 and MSRV 1.97.1 from the
+workspace root.
 
 ## Quickstart
 
@@ -420,7 +420,7 @@ CLI shim       (src/cli.rs)            argv -> service -> stdout
 - GitHub Releases publish the `runifi` binary consumed by the npm launcher.
 - The npm package name is `unifi-rmcp`; binary aliases are `unifi-rmcp` and
   `runifi`.
-- Docker/OCI metadata uses `ghcr.io/jmagar/runifi:<version>`. The GHCR
+- Docker/OCI metadata uses `ghcr.io/dinglebear-ai/runifi:<version>`. The GHCR
   namespace still reads `jmagar` because that is what
   `.github/workflows/docker-publish.yml` publishes; the git remote is
   `dinglebear-ai/runifi`. Do not "fix" one without the other.

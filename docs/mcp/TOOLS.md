@@ -1,3 +1,9 @@
+---
+title: "MCP Tools Reference -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # MCP Tools Reference -- syslog-mcp
 
 ## Design Philosophy

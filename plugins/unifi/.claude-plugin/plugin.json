@@ -1,10 +1,13 @@
 {
   "name": "unifi",
-  "description": "UniFi network management via MCP — official, internal, and hybrid UniFi Network actions through the unifi-rmcp MCP server.",
+  "description": "MCP server and CLI for UniFi Network controllers: clients, devices, WLANs, firewall, and health over stdio or streamable HTTP, with auth.",
   "author": {
-    "name": "jmagar"
+    "name": "dinglebear.ai",
+    "email": "hello@dinglebear.ai",
+    "url": "https://dinglebear.ai"
   },
-  "repository": "https://github.com/jmagar/runifi",
+  "homepage": "https://runifi.dinglebear.ai",
+  "repository": "https://github.com/dinglebear-ai/runifi",
   "license": "MIT",
   "keywords": [
     "unifi",

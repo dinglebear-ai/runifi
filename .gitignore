@@ -8,10 +8,13 @@
 .env
 .env.*
 *.env
+*.env.*
 !.env.example
+!**/.env.example
 
 # ── Local config (runtime settings — never commit) ───────────────────────────
-config.toml
+# Root runtime config only; do not hide .cargo/config.toml.
+/config.toml
 config.local.toml
 config/docker-hosts.toml
 
@@ -99,10 +102,9 @@ perf.data.old
 *.pid
 *.bak
 *.bak-*
-storage/
-data/
-logs/
-backups/
+/storage/
+/logs/
+/backups/
 
 # ── Claude Code / AI tooling ──────────────────────────────────────────────────
 .claude/settings.local.json

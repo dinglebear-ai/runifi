@@ -1,16 +1,16 @@
 {
   "name": "unifi-rmcp",
   "version": "0.2.5",
-  "description": "Node launcher for the UniFi Rust MCP server and runifi CLI for network controller operations.",
+  "description": "MCP server and CLI for UniFi Network controllers: clients, devices, WLANs, firewall, and health over stdio or streamable HTTP, with auth.",
   "license": "MIT",
-  "homepage": "https://github.com/jmagar/runifi#readme",
+  "homepage": "https://runifi.dinglebear.ai",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jmagar/runifi.git",
+    "url": "git+https://github.com/dinglebear-ai/runifi.git",
     "directory": "packages/unifi-rmcp"
   },
   "bugs": {
-    "url": "https://github.com/jmagar/runifi/issues"
+    "url": "https://github.com/dinglebear-ai/runifi/issues"
   },
   "bin": {
     "unifi-rmcp": "bin/runifi.js",

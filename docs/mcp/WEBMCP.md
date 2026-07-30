@@ -1,3 +1,9 @@
+---
+title: "Web MCP Integration -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Web MCP Integration -- syslog-mcp
 
 Browser-accessible MCP endpoints and CORS configuration.

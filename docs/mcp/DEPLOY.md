@@ -1,3 +1,9 @@
+---
+title: "Deployment Guide -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Deployment Guide -- syslog-mcp
 
 Deployment patterns for syslog-mcp. Choose the method that fits your environment.

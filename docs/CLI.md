@@ -1,3 +1,9 @@
+---
+title: "Direct CLI Reference -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Direct CLI Reference -- syslog-mcp
 
 The `syslog` binary includes direct query and deployment-lifecycle commands for

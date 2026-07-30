@@ -1,3 +1,9 @@
+---
+title: "Prerequisites -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Prerequisites -- syslog-mcp
 
 Required tools and versions before developing or deploying.

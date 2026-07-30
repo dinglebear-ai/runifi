@@ -1,3 +1,9 @@
+---
+title: "Technology Choices -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Technology Choices -- syslog-mcp
 
 Technology stack reference and rationale.

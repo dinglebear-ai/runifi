@@ -1,3 +1,9 @@
+---
+title: "Configuration Reference -- syslog-mcp"
+created: 2026-05-13
+updated: 2026-07-30
+---
+
 # Configuration Reference -- syslog-mcp
 
 Complete configuration reference. syslog-mcp uses a three-layer config system: compiled defaults, `config.toml` overlay, environment variable overrides.

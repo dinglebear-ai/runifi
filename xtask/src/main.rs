@@ -1,3 +1,5 @@
+//! Repository maintenance and API contract verification tasks.
+
 mod endpoint_probe;
 mod forbidden_strings;
 mod internal_reference;

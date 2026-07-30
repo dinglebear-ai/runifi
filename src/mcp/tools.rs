@@ -37,7 +37,8 @@ fn string_arg(args: &Value, name: &str) -> Option<String> {
 
 const HELP_TEXT: &str = r#"# unifi MCP Tool
 
-Read-only access to UniFi network controllers via REST API.
+Access UniFi network controllers through official, internal, hybrid, and
+legacy REST API actions. Mutating actions require `unifi:admin`.
 Set the required `action` argument to select the operation.
 
 ## Network
