@@ -15,7 +15,7 @@ env:
 jobs:
   fmt:
     name: Formatting
-    runs-on: [self-hosted, ci-pool-rust]
+    runs-on: ci-pool-rust
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust and kache
@@ -27,7 +27,7 @@ jobs:
 
   clippy:
     name: Clippy
-    runs-on: [self-hosted, ci-pool-rust]
+    runs-on: ci-pool-rust
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust and kache
@@ -39,7 +39,7 @@ jobs:
 
   test:
     name: Tests
-    runs-on: [self-hosted, ci-pool-rust]
+    runs-on: ci-pool-rust
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust and kache
@@ -57,7 +57,7 @@ jobs:
 
   toml:
     name: TOML Format
-    runs-on: [self-hosted, ci-pool-ops]
+    runs-on: ci-pool-ops
     steps:
       - uses: actions/checkout@v4
 
@@ -77,7 +77,7 @@ jobs:
 
   audit:
     name: Security Audit
-    runs-on: [self-hosted, ci-pool-rust]
+    runs-on: ci-pool-rust
     permissions:
       contents: read
       checks: write
@@ -95,7 +95,7 @@ jobs:
 
   npm:
     name: npm launcher
-    runs-on: [self-hosted, ci-pool-typescript]
+    runs-on: ci-pool-typescript
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
