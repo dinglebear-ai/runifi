@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "ai.dinglebear/unifi-rmcp",
+  "name": "ai.dinglebear/runifi",
   "title": "UniFi RMCP",
   "description": "MCP server and CLI for UniFi Network controllers: clients, devices, WLANs, firewall, and health over stdio or streamable HTTP, with auth.",
   "version": "0.2.5",
@@ -24,7 +24,7 @@
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
-      "identifier": "unifi-rmcp",
+      "identifier": "@dinglebear/runifi-mcp",
       "version": "0.2.5",
       "runtimeHint": "npx",
       "packageArguments": [
@@ -98,8 +98,8 @@
       "namespace": "ai.dinglebear",
       "dnsDomain": "dinglebear.ai",
       "distribution": {
-        "npm": "unifi-rmcp@0.2.5",
-        "nodePackage": "unifi-rmcp"
+        "npm": "@dinglebear/runifi-mcp@0.2.5",
+        "nodePackage": "@dinglebear/runifi-mcp"
       },
       "buildInfo": {
         "version": "0.2.5",

@@ -163,6 +163,11 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
 
+      - name: Validate npm publication identity
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm whoami >/dev/null
+
       - name: Verify npm package version matches release tag
         id: npm-version
         shell: bash
@@ -188,7 +193,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if npm view "unifi-rmcp@${{ steps.npm-version.outputs.version }}" version >/dev/null 2>&1; then
+          if npm view "@dinglebear/runifi-mcp@${{ steps.npm-version.outputs.version }}" version >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
@@ -206,15 +211,15 @@ jobs:
           set -euo pipefail
           version="${{ steps.npm-version.outputs.version }}"
           for attempt in {1..12}; do
-            if npm view "unifi-rmcp@${version}" version >/dev/null 2>&1; then
+            if npm view "@dinglebear/runifi-mcp@${version}" version >/dev/null 2>&1; then
               break
             fi
             if [[ "$attempt" == 12 ]]; then
-              echo "::error::unifi-rmcp@${version} is not visible in the npm registry"
+              echo "::error::@dinglebear/runifi-mcp@${version} is not visible in the npm registry"
               exit 1
             fi
             sleep 5
           done
           cache="$(mktemp -d)"
           trap 'rm -rf "$cache"' EXIT
-          npm_config_cache="$cache" npx -y "unifi-rmcp@${version}" --version
+          npm_config_cache="$cache" npx -y "@dinglebear/runifi-mcp@${version}" --version

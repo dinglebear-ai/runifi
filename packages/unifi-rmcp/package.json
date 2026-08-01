@@ -1,5 +1,5 @@
 {
-  "name": "unifi-rmcp",
+  "name": "@dinglebear/runifi-mcp",
   "version": "0.2.5",
   "description": "MCP server and CLI for UniFi Network controllers: clients, devices, WLANs, firewall, and health over stdio or streamable HTTP, with auth.",
   "license": "MIT",
@@ -54,10 +54,13 @@
     "oauth",
     "http-server"
   ],
-  "mcpName": "ai.dinglebear/unifi-rmcp",
-  "binaryVersion": "0.2.3",
+  "mcpName": "ai.dinglebear/runifi",
+  "binaryVersion": "0.2.5",
   "author": {
     "name": "dinglebear.ai",
     "url": "https://dinglebear.ai"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -21,7 +21,7 @@ full parity.
 | MCP tool | `unifi` |
 | Service port | **40030** |
 | MSRV | 1.97.1 |
-| npm package | `unifi-rmcp` |
+| npm package | `@dinglebear/runifi-mcp` (`packages/unifi-rmcp/`) |
 
 All three members inherit edition 2024, Rust 1.97.1, package metadata, shared
 dependencies, and the workspace lint policy. `rmcp` is exactly pinned to
