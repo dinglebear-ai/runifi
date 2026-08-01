@@ -9,8 +9,8 @@ authenticated identity, and can use generated `official_*` / `unifi_*` actions
 when their MCP auth scope permits it.
 
 **30-second path:** set `UNIFI_URL` and `UNIFI_API_KEY`, then run
-`npx -y @dinglebear/runifi-mcp health --json` -> start loopback HTTP with
-`UNIFI_MCP_HOST=127.0.0.1 npx -y @dinglebear/runifi-mcp serve` -> call `tools/call` with
+`npx -y @dinglebear/runifi health --json` -> start loopback HTTP with
+`UNIFI_MCP_HOST=127.0.0.1 npx -y @dinglebear/runifi serve` -> call `tools/call` with
 `{"action":"health"}`.
 
 **Status:** operational RMCP upstream-client server. The preserved convenience
@@ -52,7 +52,7 @@ isolation, or passing UniFi API keys through MCP tool arguments.
 | Repository | `unifi-rmcp` |
 | Rust crate | `unifi-rmcp` |
 | Binary / CLI | `runifi` |
-| npm package | `@dinglebear/runifi-mcp` |
+| npm package | `@dinglebear/runifi` |
 | npm binary aliases | `unifi-rmcp`, `runifi` |
 | MCP tool | `unifi` |
 | Config home | `~/.unifi-rmcp` on hosts, `/data` in containers |
@@ -84,7 +84,7 @@ the short Rust CLI name `runifi`.
 
 | Path | Command | Best for | Notes |
 |---|---|---|---|
-| npm / npx | `npx -y @dinglebear/runifi-mcp --help` | Local MCP clients and quick trials. | Downloads the matching `runifi` binary from GitHub Releases. |
+| npm / npx | `npx -y @dinglebear/runifi --help` | Local MCP clients and quick trials. | Downloads the matching `runifi` binary from GitHub Releases. |
 | Release installer | `curl -fsSL https://raw.githubusercontent.com/dinglebear-ai/runifi/main/scripts/install.sh \| bash` | Host installs without Node. | Installs `runifi` for the current Linux host. |
 | Docker / Compose | `docker compose up -d` | Shared HTTP MCP deployments. | Reads `.env` and exposes container port `40030`. |
 | Build from source | `cargo build --release` | Development and audits. | Produces `target/release/runifi`. |
@@ -95,9 +95,9 @@ the short Rust CLI name `runifi`.
 Run the stdio MCP server or CLI without a manual binary install:
 
 ```bash
-npx -y @dinglebear/runifi-mcp --help
-npx -y @dinglebear/runifi-mcp mcp
-npx -y @dinglebear/runifi-mcp health --json
+npx -y @dinglebear/runifi --help
+npx -y @dinglebear/runifi mcp
+npx -y @dinglebear/runifi health --json
 ```
 
 The npm package downloads `runifi` during `postinstall`. Override download
@@ -146,13 +146,13 @@ Set `UNIFI_LEGACY=true` only for older non-UDM controllers that do not use the
 ### 3. Run A Safe CLI Call
 
 ```bash
-npx -y @dinglebear/runifi-mcp health --json
+npx -y @dinglebear/runifi health --json
 ```
 
 ### 4. Start Loopback HTTP MCP
 
 ```bash
-UNIFI_MCP_HOST=127.0.0.1 npx -y @dinglebear/runifi-mcp serve
+UNIFI_MCP_HOST=127.0.0.1 npx -y @dinglebear/runifi serve
 ```
 
 In another shell:
@@ -240,7 +240,7 @@ as action arguments.
 
 | Surface | Status | Entry point | Purpose |
 |---|---:|---|---|
-| MCP stdio | Supported | `runifi mcp`, `npx -y @dinglebear/runifi-mcp mcp` | Local child-process MCP clients. |
+| MCP stdio | Supported | `runifi mcp`, `npx -y @dinglebear/runifi mcp` | Local child-process MCP clients. |
 | MCP HTTP | Supported | `runifi serve`, `POST /mcp` | Streamable HTTP MCP for local or shared server deployments. |
 | CLI | Supported | `runifi <command>` | Scriptable parity and debugging. |
 | Prompts | Supported | `network_summary` | Agent prompt for UniFi status summaries. |
@@ -418,13 +418,13 @@ CLI shim       (src/cli.rs)            argv -> service -> stdout
   `.release-please-manifest.json`, and `server.json` must agree on the released
   version.
 - GitHub Releases publish the `runifi` binary consumed by the npm launcher.
-- The npm package name is `@dinglebear/runifi-mcp`; binary aliases are `@dinglebear/runifi-mcp` and
+- The npm package name is `@dinglebear/runifi`; binary aliases are `@dinglebear/runifi` and
   `runifi`.
 - Docker/OCI metadata uses `ghcr.io/dinglebear-ai/runifi:<version>`. The GHCR
   namespace still reads `jmagar` because that is what
   `.github/workflows/docker-publish.yml` publishes; the git remote is
   `dinglebear-ai/runifi`. Do not "fix" one without the other.
-- `plugins/unifi/.mcp.json` must launch `npx -y @dinglebear/runifi-mcp mcp` so stdio
+- `plugins/unifi/.mcp.json` must launch `npx -y @dinglebear/runifi mcp` so stdio
   clients start the MCP transport rather than the HTTP server.
 - `plugins/unifi/` ships no Claude Code hooks. `scripts/validate-plugin-layout.sh`
   and `tests/setup_cli.rs` both fail if a `hooks/` directory or a manifest

@@ -53,8 +53,8 @@
   ],
   "packages": {
     ".": {
-      "package-name": "@dinglebear/runifi-mcp",
-      "component": "@dinglebear/runifi-mcp",
+      "package-name": "@dinglebear/runifi",
+      "component": "@dinglebear/runifi",
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
         "packages/unifi-rmcp/package.json",
@@ -66,7 +66,7 @@
         {
           "type": "json",
           "path": "server.json",
-          "jsonpath": "$.packages[?(@.identifier == '@dinglebear/runifi-mcp')].version"
+          "jsonpath": "$.packages[?(@.identifier == '@dinglebear/runifi')].version"
         },
         {
           "type": "json",

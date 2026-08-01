@@ -24,7 +24,7 @@
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
-      "identifier": "@dinglebear/runifi-mcp",
+      "identifier": "@dinglebear/runifi",
       "version": "0.2.5",
       "runtimeHint": "npx",
       "packageArguments": [
@@ -98,8 +98,8 @@
       "namespace": "ai.dinglebear",
       "dnsDomain": "dinglebear.ai",
       "distribution": {
-        "npm": "@dinglebear/runifi-mcp@0.2.5",
-        "nodePackage": "@dinglebear/runifi-mcp"
+        "npm": "@dinglebear/runifi@0.2.5",
+        "nodePackage": "@dinglebear/runifi"
       },
       "buildInfo": {
         "version": "0.2.5",

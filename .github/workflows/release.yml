@@ -193,7 +193,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if npm view "@dinglebear/runifi-mcp@${{ steps.npm-version.outputs.version }}" version >/dev/null 2>&1; then
+          if npm view "@dinglebear/runifi@${{ steps.npm-version.outputs.version }}" version >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
@@ -211,15 +211,15 @@ jobs:
           set -euo pipefail
           version="${{ steps.npm-version.outputs.version }}"
           for attempt in {1..12}; do
-            if npm view "@dinglebear/runifi-mcp@${version}" version >/dev/null 2>&1; then
+            if npm view "@dinglebear/runifi@${version}" version >/dev/null 2>&1; then
               break
             fi
             if [[ "$attempt" == 12 ]]; then
-              echo "::error::@dinglebear/runifi-mcp@${version} is not visible in the npm registry"
+              echo "::error::@dinglebear/runifi@${version} is not visible in the npm registry"
               exit 1
             fi
             sleep 5
           done
           cache="$(mktemp -d)"
           trap 'rm -rf "$cache"' EXIT
-          npm_config_cache="$cache" npx -y "@dinglebear/runifi-mcp@${version}" --version
+          npm_config_cache="$cache" npx -y "@dinglebear/runifi@${version}" --version
