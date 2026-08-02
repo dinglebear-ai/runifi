@@ -56,6 +56,34 @@ async fn official_list_clients_sends_expected_get_request() {
 }
 
 #[tokio::test]
+async fn official_list_clients_resolves_configured_site_id() {
+    let server = SequenceCaptureServer::spawn(vec![
+        (
+            200,
+            r#"{"data":[{"id":"site-1","internalReference":"default","name":"Default"}]}"#,
+        ),
+        (200, r#"{"items":[]}"#),
+    ]);
+    let dispatcher = ActionDispatcher::new_for_test(test_config(server.url()));
+
+    dispatcher
+        .execute(ActionRequest {
+            action: "official_list_clients".into(),
+            params: json!({"query": {"limit": 1}}),
+        })
+        .await
+        .expect("official list clients should resolve the configured site");
+
+    let requests = server.requests();
+    assert_eq!(requests.len(), 2);
+    assert!(requests[0].starts_with("get /proxy/network/integration/v1/sites http/1.1"));
+    assert!(
+        requests[1]
+            .starts_with("get /proxy/network/integration/v1/sites/site-1/clients?limit=1 http/1.1")
+    );
+}
+
+#[tokio::test]
 async fn official_create_network_sends_body() {
     let server = CaptureServer::spawn(201, r#"{"id":"network-1"}"#);
     let dispatcher = ActionDispatcher::new_for_test(test_config(server.url()));
@@ -428,6 +456,55 @@ impl CaptureServer {
 
     fn request(self) -> String {
         self.handle.join().expect("capture thread should finish")
+    }
+}
+
+struct SequenceCaptureServer {
+    addr: std::net::SocketAddr,
+    handle: std::thread::JoinHandle<Vec<String>>,
+}
+
+impl SequenceCaptureServer {
+    fn spawn(responses: Vec<(u16, &'static str)>) -> Self {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind sequence server");
+        let addr = listener.local_addr().expect("sequence server addr");
+        let handle = std::thread::spawn(move || {
+            responses
+                .into_iter()
+                .map(|(status, body)| {
+                    let (mut stream, _) = listener.accept().expect("accept request");
+                    let mut request = Vec::new();
+                    let mut buffer = [0_u8; 1024];
+                    loop {
+                        let read =
+                            std::io::Read::read(&mut stream, &mut buffer).expect("read request");
+                        if read == 0 {
+                            break;
+                        }
+                        request.extend_from_slice(&buffer[..read]);
+                        if body_complete(&request) {
+                            break;
+                        }
+                    }
+                    let response = format!(
+                        "HTTP/1.1 {status} OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
+                        body.len()
+                    );
+                    std::io::Write::write_all(&mut stream, response.as_bytes())
+                        .expect("write response");
+                    String::from_utf8_lossy(&request).to_ascii_lowercase()
+                })
+                .collect()
+        });
+        Self { addr, handle }
+    }
+
+    fn url(&self) -> String {
+        format!("http://{}", self.addr)
+    }
+
+    fn requests(self) -> Vec<String> {
+        self.handle.join().expect("sequence thread should finish")
     }
 }
 
