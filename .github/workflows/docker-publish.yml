@@ -3,12 +3,18 @@ name: Build and Push Docker Image
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing vX.Y.Z release tag to rebuild and republish
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: container-release-${{ github.event.release.tag_name }}
+  group: container-release-${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
   cancel-in-progress: false
 
 env:
@@ -26,9 +32,9 @@ jobs:
       security-events: write
     uses: dinglebear-ai/workflows/.github/workflows/hosted-container-release.yml@d7bbe71ddc1157e32ed0bebf928fc07438ba58b0
     with:
-      checkout-ref: ${{ github.event.release.tag_name }}
+      checkout-ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
       image: ghcr.io/dinglebear-ai/runifi
-      release-tag: ${{ github.event.release.tag_name }}
+      release-tag: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
       dockerfile: config/Dockerfile
       smoke-command: docker run --rm "$IMAGE_REF" --version
       cache-scope: runifi-release
@@ -56,7 +62,7 @@ jobs:
       - name: Promote the verified digest
         shell: bash
         env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
         run: |
           set -euo pipefail
           version="${RELEASE_TAG#v}"
@@ -82,15 +88,16 @@ jobs:
       contents: read
     env:
       MCP_PRIVATE_KEY: ${{ secrets.MCP_PRIVATE_KEY }}
+      MCP_REGISTRY_DOMAIN: ${{ vars.MCP_REGISTRY_DOMAIN }}
     steps:
       - name: Checkout released source
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
           persist-credentials: false
       - name: Verify registry manifest version
         env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
         run: |
           set -euo pipefail
           version="${RELEASE_TAG#v}"
@@ -110,7 +117,10 @@ jobs:
           test "$(./mcp-publisher --version 2>&1 | grep -o '1\.8\.0' | head -n1)" = "1.8.0"
       - name: Authenticate to MCP Registry
         if: env.MCP_PRIVATE_KEY != ''
-        run: ./mcp-publisher login dns --domain tootie.tv --private-key "$MCP_PRIVATE_KEY"
+        run: |
+          set -euo pipefail
+          test "$MCP_REGISTRY_DOMAIN" = dinglebear.ai
+          ./mcp-publisher login dns --domain "$MCP_REGISTRY_DOMAIN" --private-key "$MCP_PRIVATE_KEY"
       - name: Publish to MCP Registry
         if: env.MCP_PRIVATE_KEY != ''
         run: ./mcp-publisher publish
