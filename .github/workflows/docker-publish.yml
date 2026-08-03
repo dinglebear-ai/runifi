@@ -95,13 +95,45 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
           persist-credentials: false
-      - name: Verify registry manifest version
+      - name: Set canonical registry release metadata
         env:
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
         run: |
           set -euo pipefail
           version="${RELEASE_TAG#v}"
-          test "$(jq -r .version server.json)" = "$version"
+          jq --arg version "$version" '
+            .name = "ai.dinglebear/runifi" |
+            .version = $version |
+            .websiteUrl = "https://github.com/dinglebear-ai/runifi" |
+            .repository.url = "https://github.com/dinglebear-ai/runifi" |
+            .repository.source = "github" |
+            .packages = [
+              .packages[] |
+              if .registryType == "npm" then
+                .identifier = "@dinglebear/runifi" | .version = $version
+              else . end
+            ] |
+            ._meta["io.modelcontextprotocol.registry/publisher-provided"] = {
+              "namespace": "ai.dinglebear",
+              "dnsDomain": "dinglebear.ai",
+              "distribution": {
+                "npm": ("@dinglebear/runifi@" + $version),
+                "nodePackage": "@dinglebear/runifi"
+              },
+              "buildInfo": {
+                "version": $version,
+                "repository": "https://github.com/dinglebear-ai/runifi"
+              }
+            }
+          ' server.json > server.tmp
+          mv server.tmp server.json
+          jq -e --arg version "$version" '
+            .name == "ai.dinglebear/runifi" and
+            .version == $version and
+            .packages[0].identifier == "@dinglebear/runifi" and
+            .packages[0].version == $version and
+            ._meta["io.modelcontextprotocol.registry/publisher-provided"].dnsDomain == "dinglebear.ai"
+          ' server.json >/dev/null
       - name: Install checksum-pinned MCP publisher v1.8.0
         if: env.MCP_PRIVATE_KEY != ''
         run: |
