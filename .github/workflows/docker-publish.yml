@@ -36,7 +36,7 @@ jobs:
       image: ghcr.io/dinglebear-ai/runifi
       release-tag: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
       dockerfile: config/Dockerfile
-      smoke-command: docker run --rm "$IMAGE_REF" --version
+      smoke-command: docker run --rm -e UNIFI_URL=https://unifi.invalid -e UNIFI_API_KEY=release-smoke "$IMAGE_REF" --version
       cache-scope: runifi-release
       timeout-minutes: 60
     secrets:
