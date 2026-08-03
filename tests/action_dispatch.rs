@@ -1,3 +1,4 @@
+#[path = "support/harness.rs"]
 mod support;
 
 use serde_json::json;
