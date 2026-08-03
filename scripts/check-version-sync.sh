@@ -62,7 +62,15 @@ if d.get("version"):
 for i, p in enumerate(d.get("packages") or []):
     if p.get("version"):
         print(f"server.json packages[{i}].version={p['version']}")
+assert d.get("name") == "ai.dinglebear/runifi", d.get("name")
+packages = d.get("packages") or []
+npm_packages = [p for p in packages if p.get("registryType") == "npm"]
+assert len(npm_packages) == 1, npm_packages
+assert npm_packages[0].get("identifier") == "@dinglebear/runifi", npm_packages[0]
 meta = (d.get("_meta") or {}).get("io.modelcontextprotocol.registry/publisher-provided") or {}
+assert meta.get("namespace") == "ai.dinglebear", meta
+assert meta.get("dnsDomain") == "dinglebear.ai", meta
+assert (meta.get("distribution") or {}).get("nodePackage") == "@dinglebear/runifi", meta
 bi = meta.get("buildInfo") or {}
 if bi.get("version"):
     print(f"server.json buildInfo.version={bi['version']}")
