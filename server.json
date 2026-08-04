@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "ai.dinglebear/runifi",
   "title": "UniFi RMCP",
-  "description": "MCP server and CLI for UniFi Network controllers: clients, devices, WLANs, firewall, and health over stdio or streamable HTTP, with auth.",
+  "description": "UniFi Network client, device, WLAN, firewall, and health operations over MCP and CLI.",
   "version": "0.2.5",
   "websiteUrl": "https://runifi.dinglebear.ai",
   "repository": {
