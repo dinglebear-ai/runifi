@@ -1,7 +1,6 @@
 # unifi-rmcp
 
-MCP server and CLI for UniFi Network controllers: clients, devices, WLANs,
-firewall, and health over stdio or streamable HTTP, with auth.
+UniFi Network client, device, WLAN, firewall, and health operations over MCP and CLI.
 
 It exposes one MCP tool, `unifi`, plus the `runifi` CLI. Agents can inspect
 clients, devices, WiFi networks, health, alarms, events, controller sysinfo, and

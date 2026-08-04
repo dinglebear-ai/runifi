@@ -11,7 +11,7 @@ license = "MIT"
 readme = "README.md"
 homepage = "https://runifi.dinglebear.ai"
 repository = "https://github.com/dinglebear-ai/runifi"
-description = "MCP server and CLI for UniFi Network controllers: clients, devices, WLANs, firewall, and health over stdio or streamable HTTP, with auth."
+description = "UniFi Network client, device, WLAN, firewall, and health operations over MCP and CLI."
 
 [workspace.dependencies]
 anyhow = "1"
