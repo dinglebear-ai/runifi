@@ -49,7 +49,7 @@ EXPOSE 40030/tcp
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -sf http://localhost:40030/health || exit 1
 
-LABEL io.modelcontextprotocol.server.name="tv.tootie/unifi-rmcp"
+LABEL io.modelcontextprotocol.server.name="tv.nashost/unifi-rmcp"
 
 # Entrypoint runs as root, validates env, chowns /data, then execs as 1000:1000
 ENTRYPOINT ["/entrypoint.sh"]
