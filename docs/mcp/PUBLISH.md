@@ -55,7 +55,7 @@ Steps executed:
 | --- | --- | --- |
 | crates.io | `cargo publish` via GitHub Actions | `v*` tag push |
 | GHCR | Docker image build and push | `v*` tag push |
-| MCP Registry | `server.json` under `tv.tootie/syslog-mcp` namespace | manual update |
+| MCP Registry | `server.json` under `tv.nashost/syslog-mcp` namespace | manual update |
 
 ## server.json
 
@@ -63,7 +63,7 @@ MCP Registry metadata at repo root:
 
 ```json
 {
-  "name": "tv.tootie/syslog-mcp",
+  "name": "tv.nashost/syslog-mcp",
   "title": "Syslog MCP",
   "description": "Syslog receiver and MCP server for homelab log intelligence.",
   "version": "0.10.0",

@@ -45,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### CI
 
 * harden npm release smoke ([60f8fc6](https://github.com/jmagar/runifi/commit/60f8fc6ab9d3423cbcfa6b205a50f9a9d03cfd9b))
-* use tootie Tailscale OpenWiki endpoint ([7427e9d](https://github.com/jmagar/runifi/commit/7427e9dc1563d0ec85e2cadf00d375eb08ddd629))
+* use nashost Tailscale OpenWiki endpoint ([7427e9d](https://github.com/jmagar/runifi/commit/7427e9dc1563d0ec85e2cadf00d375eb08ddd629))
 
 ## [0.2.3](https://github.com/jmagar/runifi/compare/v0.2.2...v0.2.3) (2026-07-11)
 

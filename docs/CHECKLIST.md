@@ -57,7 +57,7 @@ Pre-release and quality checklist. Complete all items before tagging a release.
 - [ ] `server.json` for MCP registry is valid JSON with correct version
 - [ ] OCI image published to `ghcr.io/jmagar/syslog-mcp`
 - [ ] Crate published to crates.io (if applicable)
-- [ ] DNS verification for `tv.tootie/syslog-mcp`
+- [ ] DNS verification for `tv.nashost/syslog-mcp`
 
 ## Marketplace (if applicable)
 

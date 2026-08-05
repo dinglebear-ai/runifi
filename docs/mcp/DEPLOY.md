@@ -132,7 +132,7 @@ Port 1514 is used instead of the standard syslog port 514 to avoid needing root 
 
 ## SWAG reverse proxy
 
-See `docs/syslog.subdomain.conf` for a working nginx config that exposes MCP over HTTPS at `https://syslog-mcp.tootie.tv/mcp`.
+See `docs/syslog.subdomain.conf` for a working nginx config that exposes MCP over HTTPS at `https://syslog-mcp.example.internal/mcp`.
 
 The MCP endpoint uses RMCP Streamable HTTP in stateless JSON-response mode.
 Clients use `POST /mcp`; `GET` and `DELETE` on `/mcp` are not supported after
