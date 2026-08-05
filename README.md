@@ -528,4 +528,4 @@ All sibling servers live under the `dinglebear-ai` org.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Original Dinglebear-authored portions of this project are licensed under [AGPL-3.0-only](LICENSE). Separate commercial licensing is available for organizations that need terms outside the AGPL. Third-party material remains under its original license. See [LICENSING.md](https://github.com/dinglebear-ai/runifi/blob/main/LICENSING.md).

@@ -1,8 +1,8 @@
 {
   "name": "@dinglebear/runifi",
   "version": "0.2.5",
+  "license": "AGPL-3.0-only",
   "description": "UniFi Network client, device, WLAN, firewall, and health operations over MCP and CLI.",
-  "license": "MIT",
   "homepage": "https://runifi.dinglebear.ai",
   "repository": {
     "type": "git",
