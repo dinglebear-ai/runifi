@@ -15,11 +15,11 @@ updated: 2026-07-30
 
 ## 0 · context
 
-- **owner**: jacob · homelab `tootie.tv` · tailscale-meshed
+- **owner**: jacob · homelab `nashost.tv` · tailscale-meshed
 - **existing**: `syslog-mcp` (Rust/Axum + SQLite FTS5, custom MCP tools) ingesting
   - syslog/journald from limited hosts
   - container stdout via `dockersocketproxy` (not the docker syslog log driver — chosen for container-startup resilience and to avoid per-host fluent agents)
-- **goal**: expand ingestion across the full fleet, capture missing log streams (nginx/authelia/fail2ban/adguard/zfs/smartd/ai), add OTLP HTTP receiver to absorb claude code & codex telemetry, host on `shart`
+- **goal**: expand ingestion across the full fleet, capture missing log streams (nginx/authelia/fail2ban/adguard/zfs/smartd/ai), add OTLP HTTP receiver to absorb claude code & codex telemetry, host on `backuphost`
 - **adjacent**: `axon` (Rust RAG pipeline · TEI Qwen3-Embedding-0.6B · Qdrant · Postgres · Redis · spider.rs) handles documentation + transcript content. Logs and docs stay in separate corpora.
 
 ---
@@ -28,20 +28,20 @@ updated: 2026-07-30
 
 | host | os | role | hardware | storage | net |
 |---|---|---|---|---|---|
-| **tootie** | Unraid 7.x | media + VM host | — | 3×2TB raidz1 | 2.5GbE |
-| **dookie** | Ubuntu 25 (VM on tootie) | dev / AI / GPU | RTX 4070 + nvme + 60GB passthrough | ZFS (passthrough nvme) | 2.5GbE (host) |
-| **squirts** | Ubuntu 25 | mission-critical services | i3 NUC, UPS-backed | ZFS, hourly snaps | 2.5GbE |
-| **shart** | Unraid 7.x | backup sink + future syslog-mcp host | — | 2×8TB mirror (spinners) | 2.5GbE |
-| **steamy** | Win11 + WSL Ubuntu 25 | primary workstation | i5 11th, 48GB, RTX 3050, 2TB nvme | — | 2.5GbE |
-| **vivobook** | Win11 + WSL Ubuntu 25 | mobile, parsec → steamy | i3 13th, 24GB, 1TB nvme | — | wifi 7 |
+| **nashost** | Unraid 7.x | media + VM host | — | 3×2TB raidz1 | 2.5GbE |
+| **devhost** | Ubuntu 25 (VM on nashost) | dev / AI / GPU | RTX 4070 + nvme + 60GB passthrough | ZFS (passthrough nvme) | 2.5GbE (host) |
+| **edgehost** | Ubuntu 25 | mission-critical services | i3 NUC, UPS-backed | ZFS, hourly snaps | 2.5GbE |
+| **backuphost** | Unraid 7.x | backup sink + future syslog-mcp host | — | 2×8TB mirror (spinners) | 2.5GbE |
+| **winhost** | Win11 + WSL Ubuntu 25 | primary workstation | i5 11th, 48GB, RTX 3050, 2TB nvme | — | 2.5GbE |
+| **laptophost** | Win11 + WSL Ubuntu 25 | mobile, parsec → winhost | i3 13th, 24GB, 1TB nvme | — | wifi 7 |
 
-**Network edge:** ATT BGW-320 → UCG-Max → 2.5GbE PoE switch + U7 Pro AP. Tailscale flat mesh across all 6 nodes. SWAG terminates `*.tootie.tv` on squirts; non-public subdomains gated by Authelia + Duo 2FA.
+**Network edge:** ATT BGW-320 → UCG-Max → 2.5GbE PoE switch + U7 Pro AP. Tailscale flat mesh across all 6 nodes. SWAG terminates `*.example.internal` on edgehost; non-public subdomains gated by Authelia + Duo 2FA.
 
-**Snapshot chain:** tootie/dookie/squirts → shart (hourly) → Google Drive (5TB offsite). Squirts' ~30GB critical set replicated to every node. dookie repos additionally to tootie.
+**Snapshot chain:** nashost/devhost/edgehost → backuphost (hourly) → Google Drive (5TB offsite). Edgehost's ~30GB critical set replicated to every node. devhost repos additionally to nashost.
 
-**Workflow chain:** vivobook (parsec) → steamy (zed remote) → dookie (compute).
+**Workflow chain:** laptophost (parsec) → winhost (zed remote) → devhost (compute).
 
-**Codename naming:** scatological theme; vivobook is the lone holdout.
+**Codename naming:** scatological theme; laptophost is the lone holdout.
 
 ---
 
@@ -49,8 +49,8 @@ updated: 2026-07-30
 
 | source | mechanism | status |
 |---|---|---|
-| tootie syslog | Unraid Settings → Syslog Server | ✅ active |
-| shart syslog | Unraid Settings → Syslog Server | ✅ active |
+| nashost syslog | Unraid Settings → Syslog Server | ✅ active |
+| backuphost syslog | Unraid Settings → Syslog Server | ✅ active |
 | Docker container stdout (all hosts) | dockersocketproxy → syslog-mcp | ✅ active |
 | ubuntu/WSL host syslog | rsyslog default | ⚠️ partial (no journald) |
 | nginx access/error (SWAG) | none | ❌ missing |
@@ -60,11 +60,11 @@ updated: 2026-07-30
 | Vaultwarden auth | via container stdout | ⚠️ verify |
 | ZED (zfs events) | already in syslog default | ⚠️ verify by tag |
 | smartd | already in syslog default | ⚠️ verify by tag |
-| auditd | killed via `audit=0` on dookie (kernel cmdline) | ✅ noise eliminated |
+| auditd | killed via `audit=0` on devhost (kernel cmdline) | ✅ noise eliminated |
 | claude code OTel | none | ❌ missing |
 | codex OTel | none | ❌ missing |
 | claude/codex `.jsonl` transcripts | none | ❌ missing |
-| libvirt (dookie) on tootie | none | ❌ TBD (Unraid API vs imfile) |
+| libvirt (devhost) on nashost | none | ❌ TBD (Unraid API vs imfile) |
 
 **Why dockersocketproxy and not the syslog log driver:** if the syslog server is unreachable at container start, the syslog log driver will refuse to start the container. Pulling logs from the docker socket (read-only proxy) decouples container lifecycle from syslog-mcp availability. Trade-off: claude needs the proxy reachable to ingest, but containers run regardless.
 
@@ -76,12 +76,12 @@ updated: 2026-07-30
 
 | host | drop-ins | notes |
 |---|---|---|
-| **tootie** | none (Unraid native covers it) | `imfile` for libvirt only if Unraid API insufficient — needs User Scripts plugin to persist in `/etc/rsyslog.d/` |
-| **shart** | none | future syslog-mcp host |
-| **squirts** | imjournal · swag · authelia · adguard | the special one — all SWAG/auth/dns lives here |
-| **dookie** | imjournal · ai-transcripts | + claude/codex jsonls |
-| **steamy-wsl** | imjournal · ai-transcripts | + claude/codex jsonls |
-| **vivobook-wsl** | imjournal · ai-transcripts | + claude/codex jsonls |
+| **nashost** | none (Unraid native covers it) | `imfile` for libvirt only if Unraid API insufficient — needs User Scripts plugin to persist in `/etc/rsyslog.d/` |
+| **backuphost** | none | future syslog-mcp host |
+| **edgehost** | imjournal · swag · authelia · adguard | the special one — all SWAG/auth/dns lives here |
+| **devhost** | imjournal · ai-transcripts | + claude/codex jsonls |
+| **winhost-wsl** | imjournal · ai-transcripts | + claude/codex jsonls |
+| **laptophost-wsl** | imjournal · ai-transcripts | + claude/codex jsonls |
 
 ### 3.2 modern Ubuntu / journald gap
 
@@ -155,7 +155,7 @@ claude/codex OTel events ──► OTLP HTTP ──► syslog-mcp (api_request, 
 
 Two destinations, two query modes:
 - **axon**: "the conversation about audit backlog" (semantic)
-- **syslog-mcp**: "every claude session on dookie last Tuesday between 2-4am" (structured filter + time)
+- **syslog-mcp**: "every claude session on devhost last Tuesday between 2-4am" (structured filter + time)
 - **cross-corpora**: correlate claude activity with smartd warnings on the same host & time window via syslog-mcp JOIN
 
 ### 4.4 Authelia decision
@@ -176,7 +176,7 @@ Query log gets **loud** — every DNS query from every device. Tens of thousands
 
 ### 4.6 hosting
 
-`syslog-mcp` runs on **shart**:
+`syslog-mcp` runs on **backuphost**:
 - Least loaded box in the fleet (backup-only)
 - Mirror pool has 8TB headroom
 - DB lands in the existing zfs send chain → automatic offsite via gdrive
@@ -269,7 +269,7 @@ Bump `$MaxMessageSize 256k` on rsyslog hosts that ingest claude/codex jsonls —
 
 All drop-ins live in `/etc/rsyslog.d/`. Validate any change with `rsyslogd -N1` before reload.
 
-### 6.1 imjournal — all Ubuntu/WSL hosts (dookie, steamy-wsl, vivobook-wsl, squirts)
+### 6.1 imjournal — all Ubuntu/WSL hosts (devhost, winhost-wsl, laptophost-wsl, edgehost)
 
 ```conf
 # /etc/rsyslog.d/10-imjournal.conf
@@ -285,7 +285,7 @@ WSL prerequisite — `/etc/wsl.conf`:
 systemd=true
 ```
 
-### 6.2 squirts only — SWAG (nginx + fail2ban)
+### 6.2 edgehost only — SWAG (nginx + fail2ban)
 
 ```conf
 # /etc/rsyslog.d/30-swag.conf
@@ -315,9 +315,9 @@ input(type="imfile"
       PersistStateInterval="100")
 ```
 
-> ⚠️ Replace `/path/to/swag/appdata` with the actual mount path on squirts.
+> ⚠️ Replace `/path/to/swag/appdata` with the actual mount path on edgehost.
 
-### 6.3 squirts only — Authelia
+### 6.3 edgehost only — Authelia
 
 ```conf
 # /etc/rsyslog.d/35-authelia.conf
@@ -332,7 +332,7 @@ input(type="imfile"
       PersistStateInterval="100")
 ```
 
-### 6.4 squirts only — AdGuard
+### 6.4 edgehost only — AdGuard
 
 ```conf
 # /etc/rsyslog.d/36-adguard.conf
@@ -347,7 +347,7 @@ input(type="imfile"
       PersistStateInterval="500")
 ```
 
-### 6.5 dookie + steamy-wsl + vivobook-wsl — claude/codex transcripts
+### 6.5 devhost + winhost-wsl + laptophost-wsl — claude/codex transcripts
 
 ```conf
 # /etc/rsyslog.d/40-ai-transcripts.conf
@@ -373,16 +373,16 @@ input(type="imfile"
 
 ### 6.6 unraid persistence
 
-Standard `/etc/rsyslog.d/` doesn't survive reboot on Unraid (overlay fs). For tootie if libvirt imfile is needed:
+Standard `/etc/rsyslog.d/` doesn't survive reboot on Unraid (overlay fs). For nashost if libvirt imfile is needed:
 
 - Option A — User Scripts plugin → run at array start: copy drop-in into `/etc/rsyslog.d/`, `kill -HUP $(cat /var/run/rsyslogd.pid)`
 - Option B — append same logic to `/boot/config/go`
 
-For tootie/shart base syslog: just use Settings → Syslog Server (native, persistent, no fuss).
+For nashost/backuphost base syslog: just use Settings → Syslog Server (native, persistent, no fuss).
 
 ### 6.7 claude code & codex OTel config
 
-**Claude Code** (`~/.claude/settings.json` on dookie/steamy-wsl/vivobook-wsl):
+**Claude Code** (`~/.claude/settings.json` on devhost/winhost-wsl/laptophost-wsl):
 ```json
 {
   "env": {
@@ -390,7 +390,7 @@ For tootie/shart base syslog: just use Settings → Syslog Server (native, persi
     "OTEL_METRICS_EXPORTER": "otlp",
     "OTEL_LOGS_EXPORTER": "otlp",
     "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
-    "OTEL_EXPORTER_OTLP_ENDPOINT": "http://shart.tailnet:4318",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "http://backuphost.tailnet:4318",
     "OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE": "cumulative",
     "OTEL_METRIC_EXPORT_INTERVAL": "10000",
     "OTEL_LOGS_EXPORT_INTERVAL": "5000",
@@ -405,8 +405,8 @@ For tootie/shart base syslog: just use Settings → Syslog Server (native, persi
 [otel]
 environment = "homelab"
 log_user_prompt = true
-exporter = { otlp-http = { endpoint = "http://shart.tailnet:4318/v1/logs", protocol = "binary" } }
-trace_exporter = { otlp-http = { endpoint = "http://shart.tailnet:4318/v1/traces", protocol = "binary" } }
+exporter = { otlp-http = { endpoint = "http://backuphost.tailnet:4318/v1/logs", protocol = "binary" } }
+trace_exporter = { otlp-http = { endpoint = "http://backuphost.tailnet:4318/v1/traces", protocol = "binary" } }
 ```
 
 > ⚠️ Codex OTel coverage is incomplete — `codex exec` emits no metrics, `codex mcp-server` emits nothing. Transcript ingestion via imfile is the safety net.
@@ -415,7 +415,7 @@ trace_exporter = { otlp-http = { endpoint = "http://shart.tailnet:4318/v1/traces
 
 ## 7 · open questions
 
-- **libvirt logs from tootie** — try Unraid API first; fall back to imfile + User Scripts plugin if API doesn't expose them cleanly
+- **libvirt logs from nashost** — try Unraid API first; fall back to imfile + User Scripts plugin if API doesn't expose them cleanly
 - **`SELECT host, count(*) FROM logs WHERE tag IN ('zed','smartd','kern')` baseline** — verify what's already arriving before adding drop-ins
 - **Authelia stdout switch** — keep file-based (current plan) or strip `log.file_path` and use container stdout? Either works; file path is lower-risk to a live auth stack
 - **Vaultwarden** — verify access events present in container stdout before deciding on imfile
@@ -429,17 +429,17 @@ trace_exporter = { otlp-http = { endpoint = "http://shart.tailnet:4318/v1/traces
 
 Do **not** land this all at once. Each step should run for a day or two before adding the next, so volume/cost/value of each source is observable in isolation.
 
-1. **Stand up syslog-mcp container on shart** — bind mount on mirror pool, expose on tailscale
-2. **Point Unraid Settings → Syslog Server** on tootie + shart at the new endpoint
-3. **Deploy `10-imjournal.conf`** to dookie, squirts, steamy-wsl, vivobook-wsl. Validate volume baseline.
+1. **Stand up syslog-mcp container on backuphost** — bind mount on mirror pool, expose on tailscale
+2. **Point Unraid Settings → Syslog Server** on nashost + backuphost at the new endpoint
+3. **Deploy `10-imjournal.conf`** to devhost, edgehost, winhost-wsl, laptophost-wsl. Validate volume baseline.
 4. **Verify ZED + smartd already arriving** by tag query
 5. **Build OTLP HTTP receiver** in syslog-mcp (`/v1/logs`, `/v1/traces`; reject `/v1/metrics`)
-6. **Configure claude code OTel** on dookie first, then steamy-wsl, then vivobook-wsl
+6. **Configure claude code OTel** on devhost first, then winhost-wsl, then laptophost-wsl
 7. **Configure codex OTel** same order
 8. **Deploy `40-ai-transcripts.conf`** to capture jsonls (axon already has them; this is for cross-correlation in syslog-mcp)
-9. **Deploy `35-authelia.conf`** on squirts — first specialty source
-10. **Deploy `30-swag.conf`** on squirts
-11. **Deploy `36-adguard.conf`** on squirts last (highest volume — want everything else stable first)
+9. **Deploy `35-authelia.conf`** on edgehost — first specialty source
+10. **Deploy `30-swag.conf`** on edgehost
+11. **Deploy `36-adguard.conf`** on edgehost last (highest volume — want everything else stable first)
 12. **Tag-based retention rules** — nightly job
 13. **Ingest-side enrichment** — authelia severity, adguard tag splitting
 

@@ -69,7 +69,7 @@ MCP transports and do not use `SYSLOG_MCP_TOKEN`.
 | Variable | Required | Default | Description | Sensitive |
 | --- | --- | --- | --- | --- |
 | `SYSLOG_DOCKER_INGEST_ENABLED` | no | `false` | Enable pull-based Docker log ingestion from remote docker-socket-proxy hosts | no |
-| `SYSLOG_DOCKER_HOSTS` | yes, if Docker ingest is enabled | (none) | Comma-separated hostnames — each becomes `http://<host>:2375` (e.g. `squirts,tootie`) | no |
+| `SYSLOG_DOCKER_HOSTS` | yes, if Docker ingest is enabled | (none) | Comma-separated hostnames — each becomes `http://<host>:2375` (e.g. `edgehost,nashost`) | no |
 | `SYSLOG_DOCKER_RECONNECT_INITIAL_MS` | no | `1000` | Initial reconnect delay after host stream failure | no |
 | `SYSLOG_DOCKER_RECONNECT_MAX_MS` | no | `30000` | Maximum reconnect delay after repeated failures | no |
 

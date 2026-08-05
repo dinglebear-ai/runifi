@@ -33,7 +33,7 @@ dependencies, and the workspace lint policy. `rmcp` is exactly pinned to
 ## The Controller
 
 The target controller in this homelab is a **UniFi Cloud Gateway Max at
-`10.1.0.1`**, aliased **`mothership`**. It is the LAN router, gateway, DHCP
+`192.0.2.1`**, aliased **`gatewayhost`**. It is the LAN router, gateway, DHCP
 server, WLAN controller, and UniFi Network controller in one box. Mutating
 actions against it change live network state — there is no staging tier.
 
@@ -286,7 +286,7 @@ cargo run --bin runifi -- mcp                 # stdio MCP transport
 Live probes need a real controller and are opt-in:
 
 ```bash
-UNIFI_URL=https://10.1.0.1 UNIFI_API_KEY=... UNIFI_SITE_ID=<uuid> \
+UNIFI_URL=https://192.0.2.1 UNIFI_API_KEY=... UNIFI_SITE_ID=<uuid> \
   cargo run -p xtask -- verify-api-endpoints --mode safe_live
 ```
 
