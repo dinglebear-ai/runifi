@@ -23,11 +23,11 @@ inputs:
     default: "true"
   s3-endpoint:
     description: >-
-      Shared kache remote S3 endpoint (e.g. "http://<host>:9000"). Load-bearing
-      internal address — never hardcode it here or in a caller workflow. Callers
-      must pass it from an encrypted repository/environment secret, e.g.
+      Shared kache remote S3 endpoint. Load-bearing internal address — never
+      hardcode it here or in a caller workflow. It is provisioned as an
+      organization-level Actions variable, so callers pass it through as
       `s3-endpoint: ${{ vars.KACHE_S3_ENDPOINT }}`. Composite actions cannot
-      read the secrets context directly, so it must arrive as an input. Left
+      read the org context directly, so it must arrive as an input. Left
       empty, this runner falls back to LOCAL-ONLY caching — unless an AWS
       profile named "kache" is already configured, in which case a shared
       remote is expected and a missing endpoint fails the step instead of
