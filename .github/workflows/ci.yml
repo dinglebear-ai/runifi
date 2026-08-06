@@ -22,7 +22,7 @@ jobs:
         uses: ./.github/actions/setup-rust-kache
         with:
           components: rustfmt
-          s3-endpoint: ${{ secrets.KACHE_S3_ENDPOINT }}
+          s3-endpoint: ${{ vars.KACHE_S3_ENDPOINT }}
       - name: Check formatting
         run: cargo fmt -- --check
 
@@ -35,7 +35,7 @@ jobs:
         uses: ./.github/actions/setup-rust-kache
         with:
           components: clippy
-          s3-endpoint: ${{ secrets.KACHE_S3_ENDPOINT }}
+          s3-endpoint: ${{ vars.KACHE_S3_ENDPOINT }}
       - name: Clippy
         run: cargo clippy -- -D warnings
 
@@ -47,7 +47,7 @@ jobs:
       - name: Install Rust and kache
         uses: ./.github/actions/setup-rust-kache
         with:
-          s3-endpoint: ${{ secrets.KACHE_S3_ENDPOINT }}
+          s3-endpoint: ${{ vars.KACHE_S3_ENDPOINT }}
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
       - name: Run tests
@@ -75,7 +75,7 @@ jobs:
       - name: Install Rust and kache
         uses: ./.github/actions/setup-rust-kache
         with:
-          s3-endpoint: ${{ secrets.KACHE_S3_ENDPOINT }}
+          s3-endpoint: ${{ vars.KACHE_S3_ENDPOINT }}
       - name: Install taplo
         run: cargo install taplo-cli --locked
       - name: Check TOML formatting
@@ -96,7 +96,7 @@ jobs:
       - name: Install Rust and kache
         uses: ./.github/actions/setup-rust-kache
         with:
-          s3-endpoint: ${{ secrets.KACHE_S3_ENDPOINT }}
+          s3-endpoint: ${{ vars.KACHE_S3_ENDPOINT }}
       - uses: rustsec/audit-check@v2.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

@@ -77,7 +77,7 @@ jobs:
         uses: ./.github/actions/setup-rust-kache
         with:
           targets: ${{ matrix.target }}
-          s3-endpoint: ${{ secrets.KACHE_S3_ENDPOINT }}
+          s3-endpoint: ${{ vars.KACHE_S3_ENDPOINT }}
 
       - name: Install cross toolchain
         if: matrix.target == 'x86_64-pc-windows-msvc'
