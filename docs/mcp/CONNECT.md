@@ -136,7 +136,7 @@ All clients use the same `mcpServers` JSON structure. The only difference is the
 When syslog-mcp is behind SWAG, the MCP endpoint becomes:
 
 ```
-https://syslog-mcp.tootie.tv/mcp
+https://syslog-mcp.example.internal/mcp
 ```
 
 Configure clients to use this URL instead of `localhost:3100`.

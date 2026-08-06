@@ -22,6 +22,7 @@ jobs:
         uses: ./.github/actions/setup-rust-kache
         with:
           components: rustfmt
+          s3-endpoint: ${{ vars.KACHE_S3_ENDPOINT }}
       - name: Check formatting
         run: cargo fmt -- --check
 
@@ -34,6 +35,7 @@ jobs:
         uses: ./.github/actions/setup-rust-kache
         with:
           components: clippy
+          s3-endpoint: ${{ vars.KACHE_S3_ENDPOINT }}
       - name: Clippy
         run: cargo clippy -- -D warnings
 
@@ -44,6 +46,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Rust and kache
         uses: ./.github/actions/setup-rust-kache
+        with:
+          s3-endpoint: ${{ vars.KACHE_S3_ENDPOINT }}
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
       - name: Run tests
@@ -70,6 +74,8 @@ jobs:
       # image, so `cargo install` died with "cargo: command not found".
       - name: Install Rust and kache
         uses: ./.github/actions/setup-rust-kache
+        with:
+          s3-endpoint: ${{ vars.KACHE_S3_ENDPOINT }}
       - name: Install taplo
         run: cargo install taplo-cli --locked
       - name: Check TOML formatting
@@ -89,6 +95,8 @@ jobs:
       # installs the toolchain this way.
       - name: Install Rust and kache
         uses: ./.github/actions/setup-rust-kache
+        with:
+          s3-endpoint: ${{ vars.KACHE_S3_ENDPOINT }}
       - uses: rustsec/audit-check@v2.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

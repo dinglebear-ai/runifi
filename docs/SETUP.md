@@ -177,7 +177,7 @@ Set `SYSLOG_DOCKER_HOSTS` to a comma-separated list of hostnames in `.env`:
 
 ```env
 SYSLOG_DOCKER_INGEST_ENABLED=true
-SYSLOG_DOCKER_HOSTS=squirts,tootie,dookie
+SYSLOG_DOCKER_HOSTS=edgehost,nashost,devhost
 ```
 
 Each hostname resolves to `http://<host>:2375`. Use only on trusted private networks (e.g. tailscale).

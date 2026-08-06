@@ -21,6 +21,19 @@ inputs:
       which cannot reach the shared remote.
     required: false
     default: "true"
+  s3-endpoint:
+    description: >-
+      Shared kache remote S3 endpoint. Load-bearing internal address — never
+      hardcode it here or in a caller workflow. It is provisioned as an
+      organization-level Actions variable, so callers pass it through as
+      `s3-endpoint: ${{ vars.KACHE_S3_ENDPOINT }}`. Composite actions cannot
+      read the org context directly, so it must arrive as an input. Left
+      empty, this runner falls back to LOCAL-ONLY caching — unless an AWS
+      profile named "kache" is already configured, in which case a shared
+      remote is expected and a missing endpoint fails the step instead of
+      silently degrading to a local-only cache.
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -115,6 +128,12 @@ runs:
     - name: Configure kache
       if: inputs.enable-cache == 'true' && runner.os == 'Linux'
       shell: bash
+      env:
+        # Shared kache remote endpoint, threaded through from the caller
+        # workflow's `s3-endpoint` input (sourced from an encrypted secret —
+        # see the input description). Not committed here: it is a
+        # load-bearing internal address, not documentation.
+        KACHE_S3_ENDPOINT: ${{ inputs.s3-endpoint }}
       run: |
         set -euo pipefail
         config_file="$HOME/.config/kache/config.toml"
@@ -145,6 +164,10 @@ runs:
           [ -z "$configured_store" ] || cache_dir="$configured_store"
         elif [ -r "$credentials_file" ] &&
              grep -Eq '^[[:space:]]*\[kache\][[:space:]]*$' "$credentials_file"; then
+          if [ -z "${KACHE_S3_ENDPOINT:-}" ]; then
+            echo "::error::s3-endpoint input is empty (expected the KACHE_S3_ENDPOINT secret to be passed in) - an AWS 'kache' profile is configured so a shared remote is required, but there is no endpoint to configure it with"
+            exit 1
+          fi
           cat > "$config_file" <<TOML
         [cache]
         local_store = "$cache_dir"
@@ -155,12 +178,12 @@ runs:
         [cache.remote]
         type = "s3"
         bucket = "kache"
-        endpoint = "http://10.1.0.2:9000"
+        endpoint = "$KACHE_S3_ENDPOINT"
         region = "us-east-1"
         prefix = "rust"
         profile = "kache"
         TOML
-          echo "kache remote: s3://kache/rust via Tootie MinIO"
+          echo "kache remote: s3://kache/rust via shared MinIO"
         else
           cat > "$config_file" <<TOML
         [cache]
