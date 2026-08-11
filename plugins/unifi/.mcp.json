@@ -2,7 +2,7 @@
   "mcpServers": {
     "unifi": {
       "command": "npx",
-      "args": ["-y", "unifi-rmcp", "mcp"],
+      "args": ["-y", "@dinglebear/runifi", "mcp"],
       "env": {
         "UNIFI_URL": "${user_config.unifi_url}",
         "UNIFI_API_KEY": "${user_config.unifi_api_key}",

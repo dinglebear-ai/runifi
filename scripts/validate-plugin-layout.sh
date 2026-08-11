@@ -29,6 +29,7 @@ for file in "${claude_manifest}" "${codex_manifest}"; do
 done
 
 jq -er '.mcpServers | type == "object" and length > 0' "${mcp_json}" >/dev/null
+jq -er '.mcpServers.unifi.command == "npx" and .mcpServers.unifi.args == ["-y", "@dinglebear/runifi", "mcp"]' "${mcp_json}" >/dev/null
 
 # Claude Code plugin hooks were retired; the plugin must not reintroduce them.
 [[ ! -e "${plugin_root}/hooks" ]] || { echo "FORBIDDEN: ${plugin_root}/hooks"; exit 1; }
