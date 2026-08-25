@@ -88,7 +88,7 @@ This optional mode pulls stdout/stderr logs from remote Docker hosts through `do
 Set `SYSLOG_DOCKER_HOSTS` to a comma-separated list of hostnames. Each hostname becomes `http://<host>:2375` with insecure HTTP allowed — use only on trusted private networks.
 
 ```env
-SYSLOG_DOCKER_HOSTS=squirts,tootie,dookie
+SYSLOG_DOCKER_HOSTS=edgehost,nashost,devhost
 ```
 
 `SYSLOG_DOCKER_HOSTS_FILE` (path to a legacy `[[hosts]]` TOML file) is still accepted as a fallback when `SYSLOG_DOCKER_HOSTS` is not set.
