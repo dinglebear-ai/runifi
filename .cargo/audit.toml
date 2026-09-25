@@ -1,5 +1,0 @@
-[advisories]
-# RUSTSEC-2023-0071 is pulled transitively by lab-auth via jsonwebtoken/rsa.
-# RustSec reports no fixed rsa upgrade is available yet; keep the ignore scoped
-# to this advisory so newly patchable advisories continue to fail CI.
-ignore = ["RUSTSEC-2023-0071"]

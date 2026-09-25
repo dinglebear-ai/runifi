@@ -1,0 +1,19 @@
+Workspace cleanup archive for dinglebear-ai/runifi
+Date: 2026-09-25
+Default: main
+
+STALE_BRANCHES 4
+STALE	audit/adversarial-full-review-20260818	d5c4f39db037993ee03310842c34022f78eef948
+STALE	chore/rmcp3-edition2024	a36c9d3845fc8c58c09ac74c02fe12afb457d321
+STALE	chore/scrub-internal-identifiers-20260805	9dc81a3fd6fc8ba22e9999e4584c7314a07795b2
+STALE	codex/workflow-alignment-full-20260730	1bfc0de0dd77340b100be82481feafda81a3e8e4
+
+LOCAL_ONLY_BRANCHES 4
+LOCAL_ONLY	chore/kache-0.15.1	eb91a2a69f30aa2a1f4c8c32a3a557d907cc5693
+LOCAL_ONLY	chore/scrub-internal-identifiers-20260805	9dc81a3fd6fc8ba22e9999e4584c7314a07795b2
+LOCAL_ONLY	ci/hosted-kache-minio-20260805	13f87cdd2e1b966ac1dde3cfe5380f9525f0fa8f
+LOCAL_ONLY	main	eb91a2a69f30aa2a1f4c8c32a3a557d907cc5693
+
+STALE_WORKTREES 0
+
+WIP_SNAPSHOTS 0
