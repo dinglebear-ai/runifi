@@ -2,15 +2,16 @@
 
 UniFi Network client, device, WLAN, firewall, and health operations over MCP and CLI.
 
-It exposes one MCP tool, `unifi`, plus the `runifi` CLI. Agents can inspect
-clients, devices, WiFi networks, health, alarms, events, controller sysinfo, and
-authenticated identity, and can use generated `official_*` / `unifi_*` actions
-when their MCP auth scope permits it.
+It exposes **atomic MCP tools** generated from the UniFi capability registry,
+plus the `runifi` CLI. Agents can discover and call operations such as
+`clients`, `health`, `official_list_clients`, `unifi_get_client_stats`,
+and `get_client_rf_history` directly. The older `unifi(action=..., params=...)`
+tool remains as a deprecated compatibility router while consumers migrate.
 
 **30-second path:** set `UNIFI_URL` and `UNIFI_API_KEY`, then run
 `npx -y @dinglebear/runifi health --json` -> start loopback HTTP with
-`UNIFI_MCP_HOST=127.0.0.1 npx -y @dinglebear/runifi serve` -> call `tools/call` with
-`{"action":"health"}`.
+`UNIFI_MCP_HOST=127.0.0.1 npx -y @dinglebear/runifi serve` -> call the atomic
+`health` MCP tool with an empty argument object.
 
 **Status:** operational RMCP upstream-client server. The preserved convenience
 actions are read-oriented; generated mutating actions require `unifi:admin`
@@ -53,7 +54,7 @@ isolation, or passing UniFi API keys through MCP tool arguments.
 | Binary / CLI | `runifi` |
 | npm package | `@dinglebear/runifi` |
 | npm binary aliases | `unifi-rmcp`, `runifi` |
-| MCP tool | `unifi` |
+| MCP tools | Atomic capability tools + deprecated `unifi` compatibility router |
 | Config home | `~/.unifi-rmcp` on hosts, `/data` in containers |
 | Env prefixes | `UNIFI_*`, `UNIFI_MCP_*`, `UNIFI_RMCP_*` for npm launcher controls |
 
@@ -65,11 +66,13 @@ the short Rust CLI name `runifi`.
 - Read connected wireless and wired clients, network devices, WLAN configs,
   site health, active alarms, recent events, controller sysinfo, and current
   authenticated user.
-- Dispatch generated `official_*` actions for documented Network Integration API
-  endpoints.
-- Dispatch model-backed `unifi_*` internal controller actions and hybrid aliases
+- Expose generated `official_*` Network Integration API operations as atomic MCP tools.
+- Expose model-backed `unifi_*` internal controller operations and hybrid aliases
   such as `list_clients`, `list_devices`, `list_networks`, `list_wifi`, and
-  `get_system_info`.
+  `get_system_info` as atomic tools with per-operation schemas.
+- Correlate current WiFi client state, historical client reports, paginated system-log WiFi
+  events, and AP radio context through `get_client_rf_history`; correlation warns if the
+  10,000-event safety cap is reached.
 - Enforce `unifi:read` for read actions and `unifi:admin` for mutating actions
   in mounted HTTP MCP mode.
 - Provide setup, doctor, and endpoint-verification commands for local runtime
@@ -249,44 +252,57 @@ as action arguments.
 
 ## MCP Tool Reference
 
-One MCP tool is exposed: `unifi`. Pass the required `action` argument to select
-the operation. The action enum is generated from the inventories in `data/`, so
-the surface is large:
+The MCP server exposes one **atomic tool per runtime capability**. Code Mode can
+search tool names, descriptions, and schemas directly instead of first discovering
+an action string. `crates/unifi/src/capabilities.rs` remains the runtime source
+of truth.
 
-| Family | Actions | Mutating |
+| Family | Atomic tools | Mutating |
 |---|---:|---:|
 | `official_*` | 78 | 36 |
 | `unifi_*` | 175 | 87 |
 | Preserved convenience | 8 | 0 |
 | Hybrid aliases | 5 | 0 |
-| `help` | 1 | 0 |
-| **Total** | **267** | **123** |
+| RF composites | 1 | 0 |
+| **Total atomic tools** | **267** | **123** |
 
-Counts are derived from `data/unifi_official_network_v10_3_58.json` and the
-`runtime: true` entries of `data/unifi_internal_endpoint_models.json`.
-`crates/unifi/src/capabilities.rs` is the source of truth at runtime.
+The deprecated `unifi` compatibility router is advertised in addition to those
+267 atomic tools.
 
-### Preserved Convenience Actions
+### Common atomic tools
 
-| Action | Description | Required params | Optional params |
-|---|---|---|---|
-| `clients` | Connected wireless and wired clients. | none | none |
-| `devices` | Network devices: APs, switches, gateways. | none | none |
-| `wlans` | WiFi network configurations. | none | none |
-| `health` | Site health summary. | none | none |
-| `alarms` | Active alarms and alerts. | none | none |
-| `events` | Recent controller events. | none | `limit` |
-| `sysinfo` | Controller system information. | none | none |
-| `me` | Authenticated UniFi identity. | none | none |
-| `help` | Built-in action documentation. | none | none |
+| Tool | Purpose | Key inputs |
+|---|---|---|
+| `clients` | Connected wired and wireless clients | none |
+| `devices` | APs, switches, gateways | none |
+| `health` | Site/WAN/WLAN health | none |
+| `events` | Recent controller events | optional `limit` |
+| `unifi_get_client_wifi_details` | Current RF state for one wireless client | `client_mac` |
+| `unifi_get_client_stats` | Historical `/stat/report/{granularity}.user` samples | `client_id`; optional `granularity`, `duration`, `start`, `end` |
+| `get_client_rf_history` | Current RF state + historical samples + WiFi events + AP radio context | one of `client_id`, `client_mac`, `ip`; optional range/granularity/AP |
+| `official_list_clients` | Official Network Integration API client inventory | official path/query inputs |
+| `unifi_create_firewall_policy` | Internal controller mutation | query/body inputs; requires admin |
 
-### Generated Action Families
+`unifi_get_client_stats` validates granularities `5minutes`, `hourly`,
+`daily`, and `monthly`, then POSTs a historical report request with the
+resolved client MAC, selected attributes, and an epoch-millisecond range.
+
+`get_client_rf_history` adds provenance to each normalized sample/event.
+Missing controller telemetry remains missing rather than being inferred. Its
+association/roam history comes from the v2 system log. The legacy
+`/stat/session` endpoint is **hotspot/captive-portal authorization history**,
+not normal WiFi association or roaming history.
+
+### Generated action families
 
 | Family | Description | Scope behavior |
 |---|---|---|
-| `official_*` | Documented Network Integration API operations under `/proxy/network/integration/v1`. | Read operations require `unifi:read`; mutating operations require `unifi:admin`. |
-| `unifi_*` | Model-backed internal controller-compatible actions under `/proxy/network/api/s/{site}` and `/proxy/network/v2/api/site/{site}`. | Read operations require `unifi:read`; mutating operations require `unifi:admin`. |
-| Hybrid aliases | `list_clients`, `list_devices`, `list_networks`, `list_wifi`, `get_system_info`. | Use internal actions by default, or official API when `siteId` or `params.prefer="official"` is supplied. |
+| `official_*` | Documented Network Integration API operations under `/proxy/network/integration/v1`. Path placeholders are explicit atomic-tool inputs. | Reads require `unifi:read`; mutations require `unifi:admin`. |
+| `unifi_*` | Model-backed internal controller operations under `/proxy/network/api/s/{site}` and `/proxy/network/v2/api/site/{site}`. | Reads require `unifi:read`; mutations require `unifi:admin`. |
+| Hybrid aliases | `list_clients`, `list_devices`, `list_networks`, `list_wifi`, `get_system_info`. | Internal by default; `siteId` or `prefer="official"` selects the official backend. |
+
+The compatibility router remains available as `unifi(action=..., params=...)`
+for existing consumers, but new integrations should use atomic tools.
 
 Endpoint coverage is tracked in `docs/unifi_api_coverage.md`; contract and safe
 live verification are documented in `docs/unifi_endpoint_verification.md`.
