@@ -35,6 +35,11 @@ pub async fn execute(cfg: &UnifiConfig, capability: &Capability, params: &Value)
         }
         "sysinfo" => client.sysinfo().await,
         "me" => client.me().await,
+        "unifi_get_client_stats" => super::rf::execute_client_stats(cfg, params).await,
+        "unifi_get_client_wifi_details" => {
+            super::rf::execute_client_wifi_details(cfg, params).await
+        }
+        "get_client_rf_history" => super::rf::execute_client_rf_history(cfg, params).await,
         _ => execute_generic(cfg, capability, params).await,
     }
 }

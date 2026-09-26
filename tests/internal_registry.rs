@@ -27,7 +27,7 @@ fn internal_registry_contains_reference_count() {
         .iter()
         .filter(|tool| tool["runtime"].as_bool() == Some(true))
         .collect::<Vec<_>>();
-    assert_eq!(internal.len(), verified.len() + 8);
+    assert_eq!(internal.len(), verified.len() + 9);
 
     let exposed = internal
         .iter()
@@ -37,7 +37,7 @@ fn internal_registry_contains_reference_count() {
         let action = tool["action"].as_str().expect("verified action");
         assert!(exposed.contains(action), "verified {action} is not exposed");
     }
-    assert_eq!(internal.len(), 183);
+    assert_eq!(internal.len(), 184);
 }
 
 #[test]
@@ -57,6 +57,7 @@ fn internal_gap_examples_are_registered() {
         "unifi_get_network_health",
         "unifi_list_port_forwards",
         "unifi_trigger_rf_scan",
+        "get_client_rf_history",
     ] {
         let cap = find_capability(action).unwrap_or_else(|| panic!("missing {action}"));
         assert_eq!(cap.source, ApiSourceFamily::Internal);

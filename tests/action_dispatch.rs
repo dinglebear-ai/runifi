@@ -406,3 +406,240 @@ fn hybrid_preference_validation_is_explicit() {
         .to_string();
     assert!(message.contains("unknown hybrid preference"));
 }
+
+#[tokio::test]
+async fn client_stats_posts_typed_report_request() {
+    let server = CaptureServer::spawn(
+        200,
+        r#"{"data":[{"time":1000,"signal":-60,"tx_retries":2,"wifi_tx_attempts":100}]}"#,
+    );
+    let dispatcher = ActionDispatcher::new_for_test(test_config(server.url()));
+
+    let result = dispatcher
+        .execute(ActionRequest {
+            action: "unifi_get_client_stats".into(),
+            params: json!({
+                "client_id": "AA:BB:CC:DD:EE:FF",
+                "granularity": "5minutes",
+                "start": 1000,
+                "end": 2000
+            }),
+        })
+        .await
+        .expect("client stats should succeed");
+
+    assert_eq!(result["data"][0]["signal"], -60);
+    let request = server.request();
+    assert!(request.starts_with("post /proxy/network/api/s/default/stat/report/5minutes.user "));
+    assert!(request.contains(r#""mac":"aa:bb:cc:dd:ee:ff""#));
+    assert!(request.contains(r#""start":1000"#));
+    assert!(request.contains(r#""end":2000"#));
+    assert!(request.contains(r#""wifi_tx_attempts""#));
+}
+
+#[tokio::test]
+async fn client_stats_rejects_unknown_granularity_before_network_io() {
+    let dispatcher = ActionDispatcher::new_for_test(test_config("https://gateway.local"));
+    let error = dispatcher
+        .execute(ActionRequest {
+            action: "unifi_get_client_stats".into(),
+            params: json!({
+                "client_id": "aa:bb:cc:dd:ee:ff",
+                "granularity": "seconds"
+            }),
+        })
+        .await
+        .unwrap_err()
+        .to_string();
+
+    assert!(error.contains("granularity"));
+    assert!(error.contains("5minutes"));
+}
+
+#[tokio::test]
+async fn client_wifi_details_filters_the_requested_client() {
+    let server = CaptureServer::spawn(
+        200,
+        r#"{"data":[
+            {"mac":"aa:bb:cc:dd:ee:ff","ip":"10.1.0.113","signal":-47,"noise":-96,"tx_rate":576000,"rx_rate":1080000,"channel":36,"radio":"na"},
+            {"mac":"11:22:33:44:55:66","ip":"10.1.0.99","signal":-70}
+        ]}"#,
+    );
+    let dispatcher = ActionDispatcher::new_for_test(test_config(server.url()));
+
+    let result = dispatcher
+        .execute(ActionRequest {
+            action: "unifi_get_client_wifi_details".into(),
+            params: json!({"client_mac": "AA:BB:CC:DD:EE:FF"}),
+        })
+        .await
+        .expect("wifi details should succeed");
+
+    assert_eq!(result["mac"], "aa:bb:cc:dd:ee:ff");
+    assert_eq!(result["signal"], -47);
+    assert_eq!(result["noise"], -96);
+    let request = server.request();
+    assert!(request.starts_with("get /proxy/network/api/s/default/stat/sta "));
+}
+
+#[tokio::test]
+async fn rf_history_correlates_client_samples_events_and_ap_context() {
+    let server = SequenceCaptureServer::spawn(vec![
+        (
+            200,
+            r#"{"data":[{
+                "mac":"aa:bb:cc:dd:ee:ff",
+                "ip":"10.1.0.113",
+                "name":"macpoo",
+                "ap_mac":"de:ad:be:ef:00:01",
+                "signal":-47,
+                "noise":-96,
+                "satisfaction":100,
+                "tx_rate":576000,
+                "rx_rate":1080000,
+                "tx_retries":119,
+                "wifi_tx_attempts":543,
+                "wifi_tx_dropped":0,
+                "channel":36,
+                "channelWidth":80,
+                "radio":"na",
+                "bssid":"de:ad:be:ef:00:02"
+            }]}"#,
+        ),
+        (
+            200,
+            r#"{"data":[{
+                "time":1000,
+                "signal":-60,
+                "tx_rate":400000,
+                "rx_rate":800000,
+                "satisfaction":96,
+                "tx_retries":4,
+                "tx_packets":100,
+                "rx_packets":120,
+                "wifi_tx_attempts":105,
+                "wifi_tx_dropped":1,
+                "radio_protocol_most_common":"ax",
+                "na-signal":-60,
+                "x-set-ap_macs":["de:ad:be:ef:00:01"]
+            }]}"#,
+        ),
+        (
+            200,
+            r#"{"data":[{
+                "timestamp":1500,
+                "event":"CLIENT_DISCONNECTED_WIRELESS",
+                "category":"CLIENT_DEVICES",
+                "severity":"LOW",
+                "title_raw":"WiFi Client Disconnected",
+                "parameters":{
+                    "CLIENT":{"id":"aa:bb:cc:dd:ee:ff","ip":"10.1.0.113","name":"macpoo"},
+                    "DEVICE":{"id":"de:ad:be:ef:00:01","name":"Axilla"},
+                    "CHANNEL":{"name":"36"},
+                    "RADIO_BAND":{"name":"na"},
+                    "SIGNAL_STRENGTH":{"name":"-65"}
+                }
+            }],"total_page_count":1}"#,
+        ),
+        (
+            200,
+            r#"{"data":[{
+                "mac":"de:ad:be:ef:00:01",
+                "name":"Axilla",
+                "model":"U7-Pro",
+                "radio_table_stats":[{
+                    "radio":"na",
+                    "channel":36,
+                    "channel_width":80,
+                    "cu_total":6,
+                    "num_sta":12,
+                    "tx_retry":8
+                }]
+            }]}"#,
+        ),
+    ]);
+    let dispatcher = ActionDispatcher::new_for_test(test_config(server.url()));
+
+    let result = dispatcher
+        .execute(ActionRequest {
+            action: "get_client_rf_history".into(),
+            params: json!({
+                "client_mac": "aa:bb:cc:dd:ee:ff",
+                "start": 0,
+                "end": 2000,
+                "granularity": "hourly"
+            }),
+        })
+        .await
+        .expect("RF history should succeed");
+
+    assert_eq!(result["client"]["mac"], "aa:bb:cc:dd:ee:ff");
+    assert_eq!(result["current"]["signal"], -47);
+    assert_eq!(result["current"]["snr"], 49);
+    assert_eq!(result["ap_context"]["name"], "Axilla");
+    assert_eq!(result["ap_context"]["channel_utilization"], 6);
+
+    let timeline = result["timeline"].as_array().expect("timeline");
+    assert_eq!(timeline.len(), 2);
+    assert_eq!(timeline[0]["kind"], "client_sample");
+    assert_eq!(timeline[0]["timestamp"], 1000);
+    assert_eq!(
+        timeline[0]["provenance"]["endpoint"],
+        "/stat/report/hourly.user"
+    );
+    assert_eq!(timeline[1]["kind"], "wifi_event");
+    assert_eq!(timeline[1]["timestamp"], 1500);
+    assert_eq!(timeline[1]["ap"]["name"], "Axilla");
+
+    let requests = server.requests();
+    assert_eq!(requests.len(), 4);
+    assert!(requests[0].starts_with("get /proxy/network/api/s/default/stat/sta "));
+    assert!(requests[1].starts_with("post /proxy/network/api/s/default/stat/report/hourly.user "));
+    assert!(requests[2].starts_with("post /proxy/network/v2/api/site/default/system-log/all "));
+    assert!(requests[3].starts_with("get /proxy/network/api/s/default/stat/device "));
+}
+
+#[tokio::test]
+async fn rf_history_paginates_system_log_events() {
+    let server = SequenceCaptureServer::spawn(vec![
+        (
+            200,
+            r#"{"data":[{"mac":"aa:bb:cc:dd:ee:ff","ip":"10.1.0.113","ap_mac":"de:ad:be:ef:00:01"}]}"#,
+        ),
+        (200, r#"{"data":[]}"#),
+        (
+            200,
+            r#"{"data":[{"timestamp":1000,"event":"CLIENT_CONNECTED_WIRELESS","parameters":{"CLIENT":{"id":"aa:bb:cc:dd:ee:ff"}}}],"total_page_count":2}"#,
+        ),
+        (
+            200,
+            r#"{"data":[{"timestamp":1500,"event":"CLIENT_DISCONNECTED_WIRELESS","parameters":{"CLIENT":{"id":"aa:bb:cc:dd:ee:ff"}}}],"total_page_count":2}"#,
+        ),
+        (200, r#"{"data":[]}"#),
+    ]);
+    let dispatcher = ActionDispatcher::new_for_test(test_config(server.url()));
+
+    let result = dispatcher
+        .execute(ActionRequest {
+            action: "get_client_rf_history".into(),
+            params: json!({
+                "client_mac": "aa:bb:cc:dd:ee:ff",
+                "start": 0,
+                "end": 2000,
+                "granularity": "hourly"
+            }),
+        })
+        .await
+        .expect("RF history pagination should succeed");
+
+    let timeline = result["timeline"].as_array().expect("timeline");
+    assert_eq!(timeline.len(), 2);
+    assert_eq!(timeline[0]["timestamp"], 1000);
+    assert_eq!(timeline[1]["timestamp"], 1500);
+    assert!(result["warnings"].as_array().expect("warnings").is_empty());
+
+    let requests = server.requests();
+    assert_eq!(requests.len(), 5);
+    assert!(requests[2].contains(r#""pagenumber":0"#));
+    assert!(requests[3].contains(r#""pagenumber":1"#));
+}

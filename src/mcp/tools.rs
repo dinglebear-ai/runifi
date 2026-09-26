@@ -1,6 +1,6 @@
 use serde_json::{Value, json};
 
-use unifi::ActionRequest;
+use unifi::{ActionRequest, capabilities::find_capability};
 
 use super::AppState;
 
@@ -12,6 +12,15 @@ pub(super) async fn execute_tool(
 ) -> anyhow::Result<Value> {
     match name {
         "unifi" => dispatch(state, args).await,
+        action if find_capability(action).is_some() => {
+            state
+                .service
+                .execute(ActionRequest {
+                    action: action.to_string(),
+                    params: args,
+                })
+                .await
+        }
         _ => Err(anyhow::anyhow!("unknown tool: {name}")),
     }
 }
@@ -37,9 +46,9 @@ fn string_arg(args: &Value, name: &str) -> Option<String> {
 
 const HELP_TEXT: &str = r#"# unifi MCP Tool
 
-Access UniFi network controllers through official, internal, hybrid, and
-legacy REST API actions. Mutating actions require `unifi:admin`.
-Set the required `action` argument to select the operation.
+Deprecated compatibility router for UniFi network actions.
+Prefer the atomic MCP tools exposed alongside this router. Mutating operations
+require `unifi:admin`.
 
 ## Network
 - `clients`   — Connected wireless and wired clients
