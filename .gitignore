@@ -166,3 +166,4 @@ CLAUDE.md.local
 # Local binary artifacts
 /bin/
 plugins/unifi/bin/
+worktrees/
