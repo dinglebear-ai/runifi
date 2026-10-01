@@ -26,7 +26,7 @@ inputs:
       Shared kache remote S3 endpoint. Load-bearing internal address — never
       hardcode it here or in a caller workflow. It is provisioned as an
       organization-level Actions variable, so callers pass it through as
-      `s3-endpoint: ${{ vars.KACHE_S3_ENDPOINT }}`. Composite actions cannot
+      `s3-endpoint` from the KACHE_S3_ENDPOINT organization variable. Composite actions cannot
       read the org context directly, so it must arrive as an input. Left
       empty, this runner falls back to LOCAL-ONLY caching — unless an AWS
       profile named "kache" is already configured, in which case a shared
@@ -94,7 +94,7 @@ runs:
       if: inputs.enable-cache == 'true' && runner.os == 'Linux'
       shell: bash
       env:
-        KACHE_VERSION: "0.12.0"
+        KACHE_VERSION: "0.28.1"
       run: |
         set -euo pipefail
         # Reuse any already-installed binary at the pinned version. Persistent
