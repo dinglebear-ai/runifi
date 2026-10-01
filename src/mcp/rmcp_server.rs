@@ -59,13 +59,17 @@ impl ServerHandler for UnifiRmcpServer {
     ) -> Result<CallToolResponse, ErrorData> {
         let tool_name = request.name.to_string();
 
-        let action: String = request
-            .arguments
-            .as_ref()
-            .and_then(|m| m.get("action"))
-            .and_then(Value::as_str)
-            .unwrap_or("")
-            .to_owned();
+        let action = if tool_name == "unifi" {
+            request
+                .arguments
+                .as_ref()
+                .and_then(|m| m.get("action"))
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_owned()
+        } else {
+            tool_name.clone()
+        };
 
         let auth = require_auth_context(&self.state, &context)?;
         let required_scope = required_scope_for(&action);
@@ -216,8 +220,10 @@ pub fn streamable_http_service(
 const SCHEMA_RESOURCE_URI: &str = "unifi://schema/mcp-tool";
 
 fn schema_resource() -> Resource {
-    Resource::new(SCHEMA_RESOURCE_URI, "unifi tool schema")
-        .with_description("JSON schema for the unifi MCP tool and its action-based parameters")
+    Resource::new(SCHEMA_RESOURCE_URI, "unifi MCP tool schemas")
+        .with_description(
+            "JSON schemas for atomic UniFi tools plus the deprecated compatibility router",
+        )
         .with_mime_type("application/json")
 }
 
@@ -319,7 +325,14 @@ pub fn required_scope_for(action: &str) -> Option<&'static str> {
 
 fn is_validation_error(error: &anyhow::Error) -> bool {
     let message = error.to_string().to_ascii_lowercase();
-    message.contains(" is required") || message.contains("unknown unifi action")
+    message.contains(" is required")
+        || message.contains("unknown unifi action")
+        || message.contains("invalid granularity")
+        || message.contains("invalid duration")
+        || message.contains("missing required path parameter")
+        || message.contains("start must be less")
+        || message.contains("unable to resolve client selector")
+        || message.contains("is not currently connected")
 }
 
 // ── allowed hosts / origins ───────────────────────────────────────────────────

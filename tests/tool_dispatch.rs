@@ -82,9 +82,27 @@ fn mcp_auth_scope_comes_from_capability_registry() {
         Some("unifi:admin")
     );
     assert_eq!(
+        unifi_rmcp::mcp::required_scope_for("get_client_rf_history"),
+        Some("unifi:read")
+    );
+    assert_eq!(
         unifi_rmcp::mcp::required_scope_for("missing_action"),
         Some("unifi:__deny__")
     );
+}
+
+#[tokio::test]
+async fn atomic_tool_dispatches_without_action_wrapper() {
+    let state = loopback_state();
+    let result =
+        unifi_rmcp::testing::call_tool(&state, "get_client_rf_history", serde_json::json!({}))
+            .await;
+
+    let message = result
+        .expect_err("RF history should validate its selector before network I/O")
+        .to_string();
+    assert!(message.contains("client_mac"));
+    assert!(!message.contains("unknown tool"));
 }
 
 #[tokio::test]

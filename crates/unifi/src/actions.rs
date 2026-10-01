@@ -1,6 +1,8 @@
 pub mod hybrid;
 pub mod internal;
 pub mod official;
+pub mod rf;
+mod rf_normalize;
 
 use anyhow::{Result, bail};
 use serde_json::Value;

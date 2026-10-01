@@ -3,8 +3,8 @@ name: unifi
 description: >
   Use this skill whenever the user asks about their UniFi network — connected clients, who's
   on the WiFi, which devices are online, access points, switches, gateways, network health,
-  site health, active alarms, network events, WiFi configurations (SSIDs), controller sysinfo,
-  or their authenticated UniFi identity. This skill covers the unifi-rmcp MCP server, a Rust bridge
+  site health, active alarms, network events, WiFi configurations (SSIDs), client RF/RSSI history,
+  retries/roams, controller sysinfo, or their authenticated UniFi identity. This skill covers the unifi-rmcp MCP server, a Rust bridge
   to official and internal UniFi APIs via X-API-KEY. Legacy convenience actions are read-only;
   mutating actions require explicit admin authorization. Trigger phrases include: "UniFi clients",
   "connected clients", "who's on the network", "UniFi devices", "access points", "APs",
@@ -21,61 +21,55 @@ Access to a UniFi network controller via the **unifi-rmcp** MCP server. Data is 
 
 ## Quick Reference
 
-All operations use a single `unifi` MCP tool with an `action` parameter:
+Use the **atomic MCP tools directly**. Tool names match registered capabilities, so Code Mode and MCP clients can discover the exact operation and schema without routing through an `action` string.
 
-```
-unifi(action="clients")           # who's connected
-unifi(action="devices")           # APs, switches, gateways
-unifi(action="health")            # site health summary
-unifi(action="wlans")             # WiFi network configs
-unifi(action="alarms")            # active alarms
-unifi(action="events")            # recent controller events
-unifi(action="sysinfo")           # controller version/uptime
-unifi(action="me")                # authenticated user info
-unifi(action="help")              # built-in documentation
-```
-
-Generated action families are also available:
-
-```
-unifi(action="official_list_clients", params={"siteId": "<uuid>"})
-unifi(action="unifi_list_alarms")
-unifi(action="list_clients", params={"siteId": "<uuid>"})
-unifi(action="list_clients", params={"prefer": "internal"})
+```text
+clients()                                      # who's connected
+devices()                                      # APs, switches, gateways
+health()                                       # site health summary
+events(limit=25)                               # recent controller events
+unifi_get_client_wifi_details(client_mac=...) # current client RF snapshot
+unifi_get_client_stats(client_id=..., duration="daily")
+get_client_rf_history(client_mac=..., duration="daily")
+official_list_clients(siteId="<uuid>")
 ```
 
-Action surface summary:
+The deprecated compatibility router still accepts `unifi(action="...", params={...})` for older consumers. Do not choose it for new calls when the atomic tool exists.
+
+Atomic surface summary:
 
 - `official_*`: 78 documented Network Integration API operations; mutating operations require admin authorization.
-- `unifi_*`: model-backed internal controller actions; runtime rows are exposed as endpoint actions.
-- Hybrid actions: read convenience actions that choose internal by default and official when `siteId` or `prefer="official"` is supplied.
+- `unifi_*`: 175 model-backed internal controller endpoint operations.
+- Legacy conveniences: 8 direct tools including `clients`, `devices`, `wlans`, `health`, `alarms`, `events`, `sysinfo`, and `me`.
+- Hybrid actions: 5 direct read tools that use internal APIs by default and official APIs when `siteId` or `prefer="official"` is supplied.
+- RF composite: `get_client_rf_history` correlates current RF state, historical client samples, paginated system-log association/roam/disconnect events, and current AP radio context; a warning is returned if the 10,000-event safety cap is reached.
+- Total atomic tools: 267, plus the deprecated `unifi` compatibility router.
 
 ---
 
-## Tier 1 — MCP Tool (preferred)
+## Tier 1 — Atomic MCP Tools (preferred)
 
-**Tool name:** `unifi`  
-**Required parameter:** `action` (string)
+Discover and call the capability-named tool directly. The server advertises per-tool auth scope and an input schema for every atomic operation. Typed schemas are provided for the common conveniences, hybrid tools, and RF/client-statistics operations; generated endpoint tools expose their path placeholders directly plus `query` and, when applicable, `body`.
 
-### Action Reference
+### Tool Reference
 
-| action | description | extra params |
-|--------|-------------|--------------|
-| `clients` | Connected wireless and wired clients | — |
-| `devices` | Network devices: APs, switches, gateways | — |
-| `wlans` | WiFi network configurations (SSID/band/security/VLAN) | — |
-| `health` | Site health summary (subsystems, AP counts, client counts) | — |
-| `alarms` | Active alarms and alerts | — |
+| tool/family | description | notable inputs |
+|-------------|-------------|----------------|
+| `clients` | Connected wireless and wired clients | none |
+| `devices` | Network devices: APs, switches, gateways | none |
+| `wlans` | WiFi network configurations | none |
+| `health` | Site health summary | none |
 | `events` | Recent controller events | optional `limit` |
-| `sysinfo` | Controller version, build, hostname, uptime, timezone | — |
-| `me` | Authenticated user info (name, email, role) | — |
-| `help` | Returns built-in action documentation | — |
+| `unifi_get_client_wifi_details` | Current connected-client RF snapshot from `/stat/sta` | `client_mac` |
+| `unifi_get_client_stats` | Historical client report | `client_id`; optional `granularity`, `duration`, `start`, `end` |
+| `get_client_rf_history` | Correlated RF/client timeline | one of `client_id`, `client_mac`, `ip`; optional range controls and `ap_mac` |
+| `official_*` | Documented Network Integration API under `/proxy/network/integration/v1` | direct path params such as `siteId`, `networkId`; optional `query`/`body` |
+| `unifi_*` | Internal controller-compatible endpoint operations | path params when present; optional `query`/`body` |
+| hybrid tools | `list_clients`, `list_devices`, `list_networks`, `list_wifi`, `get_system_info` | internal by default; `siteId` or `prefer="official"` selects official API |
 
-| family | description | extra params |
-|--------|-------------|--------------|
-| `official_*` | Documented Network Integration API under `/proxy/network/integration/v1` | path params like `siteId`, `networkId`; `query`; `body`; admin auth for mutations |
-| `unifi_*` | Internal controller-compatible actions under `/proxy/network/api/s/{site}` and `/proxy/network/v2/api/site/{site}` | `query`; `body`; admin auth for mutations |
-| hybrid actions | `list_clients`, `list_devices`, `list_networks`, `list_wifi`, `get_system_info` | uses internal actions by default; pass `siteId` or `prefer="official"` for official API |
+Historical client reports use `POST /stat/report/{granularity}.user` with the requested RF/statistics attributes, client MAC, and millisecond `start`/`end` range in the request body. Supported granularities are `5minutes`, `hourly`, `daily`, and `monthly`.
+
+`/stat/session` is hotspot/captive-portal authorization history, not normal WiFi association history. For connect/disconnect/roam correlation, use `get_client_rf_history`, which reads the system log.
 
 ### Response Shape
 
@@ -90,35 +84,33 @@ it calls does not use the `/proxy/network` prefix — this is intentional and un
 
 ### Example Calls
 
-```python
-# List connected clients
-unifi(action="clients")
+```text
+clients()
 # → data[].{hostname, mac, ip, is_wired, essid, sw_port}
 
-# List network devices
-unifi(action="devices")
+devices()
 # → data[].{name, model, type, mac, ip, state, state_str}
 
-# WiFi networks (configurations, not per-SSID client counts)
-unifi(action="wlans")
-# → data[].{name, band, security, enabled, vlan_enabled, vlanid}
-
-# Health overview
-unifi(action="health")
+health()
 # → data[].{subsystem, status, num_ap, num_disconnected, num_user, num_guest}
 
-# Recent controller events
-unifi(action="events", params={"limit": 25})
-# → data[] event records; limit truncates the returned array
+events(limit=25)
+# → data[] event records
 
-# Controller info
-unifi(action="sysinfo")
-# → data[0].{version, build, hostname, uptime, timezone}
+unifi_get_client_wifi_details(client_mac="aa:bb:cc:dd:ee:ff")
+# → normalized current signal/noise/SNR/rates/retries/channel/band/AP fields
 
-# Current user
-unifi(action="me")
-# → data.{name, email, role, is_super_admin}
+unifi_get_client_stats(client_id="aa:bb:cc:dd:ee:ff", duration="daily", granularity="hourly")
+# → historical /stat/report/hourly.user response
+
+get_client_rf_history(client_mac="aa:bb:cc:dd:ee:ff", duration="daily")
+# → {client, range, current, ap_context, timeline, warnings, session_semantics}
+
+official_list_clients(siteId="<uuid>")
+# → documented Network Integration API response
 ```
+
+For an older caller that only knows the router, `unifi(action="clients")` remains available as deprecated compatibility behavior.
 
 ---
 

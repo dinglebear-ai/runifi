@@ -54,6 +54,7 @@ pub fn capabilities() -> Vec<Capability> {
         hybrid("list_networks", "List Networks"),
         hybrid("list_wifi", "List WiFi"),
         hybrid("get_system_info", "Get System Info"),
+        composite("get_client_rf_history", "Get Client RF History"),
     ]);
     caps
 }
@@ -81,6 +82,19 @@ fn hybrid(action: &str, title: &str) -> Capability {
         mutating: false,
         auth_scope: AuthScope::Read,
         verification_mode: Some("contract_ok".to_string()),
+    }
+}
+
+fn composite(action: &str, title: &str) -> Capability {
+    Capability {
+        action: action.to_string(),
+        title: title.to_string(),
+        source: ApiSourceFamily::Internal,
+        method: None,
+        path: None,
+        mutating: false,
+        auth_scope: AuthScope::Read,
+        verification_mode: Some("composite".to_string()),
     }
 }
 

@@ -585,7 +585,7 @@
     {
       "action": "unifi_get_client_stats",
       "title": "Get Client Stats",
-      "method": "GET",
+      "method": "POST",
       "path": "/stat/report/{granularity}.user",
       "mutating": false,
       "runtime": true,

@@ -1,12 +1,13 @@
 # unifi-rmcp — CLAUDE.md
 
 Rust MCP server and CLI bridging the **UniFi Network controller REST API**.
-Exposes one action-dispatched MCP tool (`unifi`) plus the `runifi` CLI at
-full parity.
+Exposes atomic MCP tools generated from the capability registry plus the
+`runifi` CLI. The legacy `unifi(action=..., params=...)` surface is a
+deprecated compatibility router.
 
 > **Not read-only.** An earlier version of this file described this as a
 > "read-only REST bridge". That has not been true since the generated action
-> registry landed: 123 of the 266 actions are mutating and require
+> registry landed: 123 of the 267 capabilities are mutating and require
 > `unifi:admin`.
 
 ## Repo Facts
@@ -18,7 +19,7 @@ full parity.
 | Cargo workspace | 3 members: `.` (root), `crates/unifi`, `xtask` |
 | Root package | `unifi-rmcp` (edition 2024) |
 | Binary / CLI | `runifi` |
-| MCP tool | `unifi` |
+| MCP tools | 267 atomic capability tools + deprecated `unifi` compatibility router |
 | Service port | **40030** |
 | MSRV | 1.97.1 |
 | npm package | `@dinglebear/runifi` (`packages/unifi-rmcp/`) |
@@ -53,8 +54,8 @@ src/                          # unifi-rmcp — MCP/CLI projection layer
   token_limit.rs              Response size guardrail
   mcp.rs                      AppState, AuthPolicy, build_auth_layer, pub exports
   mcp/rmcp_server.rs          UnifiRmcpServer — rmcp ServerHandler (tools/resources/prompts) + scope checks
-  mcp/tools.rs                execute_tool() -> dispatch() — thin shim, plus HELP_TEXT
-  mcp/schemas.rs              tool_definitions() — builds the action enum from all_capabilities()
+  mcp/tools.rs                execute_tool() — thin atomic-tool shim + compatibility router
+  mcp/schemas.rs              tool_definitions() — projects all_capabilities() into atomic schemas
   mcp/prompts.rs              list_prompts() / get_prompt() — network_summary
   mcp/routes.rs               axum router, auth middleware, /health
 
@@ -64,7 +65,7 @@ crates/unifi/                 # unifi — reusable core (no MCP/CLI types)
   client.rs, http.rs          HTTP transport
   config.rs                   Controller-side config struct
   api.rs, api/{official,internal,path}.rs   Path families + ApiSourceFamily
-  actions.rs, actions/{official,internal,hybrid}.rs   Action routing; hybrid::resolve()
+  actions.rs, actions/{official,internal,hybrid,rf,rf_normalize}.rs   Request routing + RF composite
   capabilities.rs             Capability, AuthScope, all_capabilities(), find_capability()
   capabilities/official_network.rs   Parses data/unifi_official_network_v10_3_58.json
   capabilities/internal_network.rs   Parses data/unifi_internal_endpoint_models.json + legacy/hybrid
@@ -75,11 +76,13 @@ xtask/                        # dev tooling (edition 2024)
   forbidden_strings.rs, verify_policy.rs   guardrails
 ```
 
-## Action Surface
+## Capability / MCP Surface
 
-The action enum is **generated at build time from JSON inventories in
-`data/`** — it is not hand-maintained. `all_capabilities()` is the single
-source of truth.
+Capabilities are **generated at build time from JSON inventories in `data/`**
+plus a small set of deliberate convenience/composite capabilities.
+`all_capabilities()` is the single source of truth. Each runtime capability is
+projected into its own atomic MCP tool; the deprecated `unifi` router is
+additional compatibility surface.
 
 | Family | Count | Source | Path base |
 |---|---:|---|---|
@@ -87,8 +90,15 @@ source of truth.
 | `unifi_*` | 175 (87 mutating) | `data/unifi_internal_endpoint_models.json` (`runtime: true` only) | `/proxy/network/api/s/{site}`, `/proxy/network/v2/api/site/{site}` |
 | Legacy convenience | 8 (read-only) | hardcoded in `internal_network.rs` | internal paths |
 | Hybrid aliases | 5 | hardcoded in `internal_network.rs` | resolves to official or internal |
-| `help` | 1 | `mcp/tools.rs` | n/a |
-| **Total in enum** | **267** | | |
+| RF composites | 1 | hardcoded in `internal_network.rs` | multiple internal endpoints |
+| **Total atomic tools** | **267** | | |
+
+`get_client_rf_history` is the first RF composite. It correlates current
+`/stat/sta` client state, historical `/stat/report/{granularity}.user`
+samples, paginated v2 system-log WiFi events, and current `/stat/device` AP radio
+context. System-log correlation follows `total_page_count` (or a short final page)
+with a 100-page / 10,000-event safety cap and emits an output warning if capped.
+Keep this orchestration in the core action layer, never in MCP shims.
 
 **Legacy convenience actions** (all read-only, `verification_mode:
 "legacy_alias"`): `clients`, `devices`, `wlans`, `health`, `alarms`,
